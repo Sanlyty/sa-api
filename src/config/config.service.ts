@@ -4,59 +4,28 @@ import * as dotenv from 'dotenv';
 
 @Injectable()
 export class ConfigService {
-  private readonly envConfig: { [key: string]: string };
+    private readonly envConfig: { [key: string]: string };
 
-  constructor() {
-    this.envConfig = dotenv.parse(fs.readFileSync(`${process.env.CONF_SA_API_PATH}application.env`));
-  }
-
-  getDatabaseHost(): string {
-    return this.envConfig.db_host;
-  }
-
-  getDatabasePort(): number {
-    return parseInt(this.envConfig.db_port, 10);
-  }
-
-  getDatabaseUsername(): string {
-    return this.envConfig.db_username;
-  }
-
-  getDatabasePassword(): string {
-    return this.envConfig.db_password;
-  }
-
-  getDatabaseName(): string {
-    return this.envConfig.db_database;
-  }
-
-  getMigrationsPattern(): string {
-    if (this.envConfig.db_migrations === undefined) {
-      return 'dist/migration/*.js';
+    constructor() {
+        this.envConfig = dotenv.parse(
+            fs.readFileSync(`${process.env.CONF_SA_API_PATH}application.env`)
+        );
     }
-    return this.envConfig.db_migrations;
-  }
 
-  getSynchronize(): boolean {
-    // TODO how set up NODE_ENV
-    if (process.env.NODE_ENV === 'production') {
-      return false;
-    }
-    return this.envConfig.db_synchronize === 'true';
-  }
+    getDatabaseSettings() {
+        const cfg = this.envConfig;
+        const production = process.env.NODE_ENV === 'production';
 
-  getDbLogging(): boolean {
-    if (this.envConfig.db_logging === undefined) {
-      return false;
+        return {
+            host: cfg.db_host,
+            port: parseInt(cfg.db_port),
+            username: cfg.db_username,
+            password: cfg.db_password,
+            database: cfg.db_database,
+            synchronize: !production && cfg.db_synchronize === 'true',
+            dropSchema: !production && cfg.db_dropSchema === 'true',
+            logging: cfg.db_logging === 'true',
+            migrations: [this.envConfig.db_migrations ?? 'dist/migration/*.js'],
+        };
     }
-    return this.envConfig.db_logging === 'true';
-  }
-
-  getDropSchema(): boolean {
-    // TODO how set up NODE_ENV
-    if (process.env.NODE_ENV === 'production') {
-      return false;
-    }
-    return this.envConfig.db_dropSchema === 'true';
-  }
 }

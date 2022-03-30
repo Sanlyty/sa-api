@@ -1,16 +1,13 @@
-import { Cron, Interval } from '@nestjs/schedule';
-import { Injectable, Logger } from '@nestjs/common';
-import { getConnection } from 'typeorm';
+import { Cron } from '@nestjs/schedule';
+import { Injectable } from '@nestjs/common';
 import { DatabaseAdminitrationService } from '../services/database-adminitration.service';
 
 @Injectable()
 export class MaterializedViewRefresher {
+    constructor(private adminService: DatabaseAdminitrationService) {}
 
-  constructor(private adminService: DatabaseAdminitrationService) {
-  }
-
-  @Cron('0 0 */2 * * *')
-  public async refreshMaterializedViews() {
-    await this.adminService.refreshMaterializedViews();
-  }
+    @Cron('0 0 */2 * * *')
+    public async refreshMaterializedViews() {
+        await this.adminService.refreshMaterializedViews();
+    }
 }

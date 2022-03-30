@@ -13,24 +13,21 @@ import { DatabaseAdminitrationService } from './services/database-adminitration.
 import { AdminController } from './controllers/admin.controller';
 
 @Module({
-  controllers: [
-    DataCenterStatisticsController,
-    InfrastructureStatisticsController,
-    LatencyController,
-    AdminController
-  ],
-  providers: [
-    DataCenterStatisticsService,
-    GraphDataService,
-    PoolAggregatedMetricService,
-    SystemAggregatedMetricService,
-    LatencyBlockSizeService,
-    MaterializedViewRefresher,
-    DatabaseAdminitrationService,
-  ],
-  imports: [
-    CollectorModule,
-  ],
+    controllers: [
+        DataCenterStatisticsController,
+        InfrastructureStatisticsController,
+        LatencyController,
+        AdminController,
+    ],
+    providers: [
+        DataCenterStatisticsService,
+        GraphDataService,
+        PoolAggregatedMetricService,
+        SystemAggregatedMetricService,
+        LatencyBlockSizeService,
+        MaterializedViewRefresher,
+        DatabaseAdminitrationService,
+    ],
+    imports: [CollectorModule],
 })
-export class StatisticsModule {
-}
+export class StatisticsModule {}
