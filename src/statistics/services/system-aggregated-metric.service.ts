@@ -7,24 +7,25 @@ import { StorageEntityEntity } from '../../collector/entities/storage-entity.ent
 
 @Injectable()
 export class SystemAggregatedMetricService extends AggregatedMetricService {
-  constructor(protected dcService: DataCenterService,
-              protected typeService: MetricTypeService) {
-    super(dcService, typeService);
-  }
+    constructor(
+        protected dcService: DataCenterService,
+        protected typeService: MetricTypeService
+    ) {
+        super(dcService, typeService);
+    }
 
-  getData(types: MetricType[], dataCenterIds: number[]): Promise<StorageEntityEntity[]> {
-    return this.dcService.getPerformanceMetrics(types, dataCenterIds);
-  }
+    getData(
+        types: MetricType[],
+        dataCenterIds: number[]
+    ): Promise<StorageEntityEntity[]> {
+        return this.dcService.getPerformanceMetrics(types, dataCenterIds);
+    }
 
-  fetchMetricsOnly(entities: StorageEntityEntity[]): any[] {
-    const result = [];
-    entities.forEach(dataCenter =>
-      dataCenter.children.forEach(system =>
-          // owner.pools.forEach(owner =>
-          result.push(system.metrics),
-        // ),
-      ),
-    );
-    return result;
-  }
+    fetchMetricsOnly(entities: StorageEntityEntity[]): any[] {
+        const result = [];
+        entities.forEach((dataCenter) =>
+            dataCenter.children.forEach((system) => result.push(system.metrics))
+        );
+        return result;
+    }
 }

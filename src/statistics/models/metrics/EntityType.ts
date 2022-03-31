@@ -1,6 +1,1 @@
-export enum EntityType {
-  POOL = 'pool',
-  SYSTEM = 'system',
-  ADAPTER = 'adapter',
-  PORT = 'port',
-}
+export type EntityType = 'pool' | 'system' | 'adapter' | 'port';

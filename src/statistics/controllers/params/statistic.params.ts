@@ -1,4 +1,4 @@
 export class StatisticParams {
-  fromDate: number;
-  toDate: number;
+    fromDate: number;
+    toDate: number;
 }

@@ -3,21 +3,29 @@ import { MetricEntityInterface } from '../../collector/entities/metric-entity.in
 import { AggregationAlgorithmAbstract } from './aggregation-algorithm.abstract';
 
 export class SumImpl extends AggregationAlgorithmAbstract {
-  constructor() {
-    super();
-  }
+    constructor() {
+        super();
+    }
 
-  aggregate(entities: MetricEntityInterface[][], metricType: MetricType, options: any): MetricEntityInterface {
-    let aggValueTotal = 0;
-    entities.forEach(
-      entity => {
-        const metric = this.findMetricByType(entity, metricType);
-        if (metric !== undefined) {
-          aggValueTotal += metric.value;
-        }
-      },
-    );
-    return { value: aggValueTotal, metricTypeEntity: null, id: null, date: null };
-  }
+    aggregate(
+        entities: MetricEntityInterface[][],
+        metricType: MetricType,
+        options: any
+    ): MetricEntityInterface {
+        let aggValueTotal = 0;
 
+        entities.forEach((entity) => {
+            const metric = this.findMetricByType(entity, metricType);
+            if (metric) {
+                aggValueTotal += metric.value;
+            }
+        });
+
+        return {
+            value: aggValueTotal,
+            metricTypeEntity: null,
+            id: null,
+            date: null,
+        };
+    }
 }

@@ -3,27 +3,41 @@ import { MetricEntityInterface } from '../../collector/entities/metric-entity.in
 import { AggregationAlgorithmAbstract } from './aggregation-algorithm.abstract';
 
 export class WeightedAverageImpl extends AggregationAlgorithmAbstract {
+    constructor() {
+        super();
+    }
 
-  constructor() {
-    super();
-  }
+    aggregate(
+        entities: MetricEntityInterface[][],
+        metricType: MetricType,
+        options: any
+    ): MetricEntityInterface {
+        let weightValueTotal = 0;
+        let aggValueTotal = 0;
 
-  aggregate(entities: MetricEntityInterface[][], metricType: MetricType, options: any): MetricEntityInterface {
-    let weightValueTotal = 0;
-    let aggValueTotal = 0;
-    entities.forEach(
-      entity => {
-        const metric = this.findMetricByType(entity, metricType);
-        if (metric !== undefined) {
-          const metricWeight = this.findMetricByType(entity, options.weightType);
-          if (metric.value > options.ignoreValueUnder) {
-            aggValueTotal += metric.value * metricWeight.value;
-            weightValueTotal += metricWeight.value;
-          }
-        }
-      },
-    );
-    const aggValueResult = aggValueTotal / weightValueTotal;
-    return { value: aggValueResult, metricTypeEntity: null, id: null, date: null };
-  }
+        entities.forEach((entity) => {
+            const metric = this.findMetricByType(entity, metricType);
+
+            if (metric) {
+                const metricWeight = this.findMetricByType(
+                    entity,
+                    options.weightType
+                );
+
+                if (metric.value > options.ignoreValueUnder) {
+                    aggValueTotal += metric.value * metricWeight.value;
+                    weightValueTotal += metricWeight.value;
+                }
+            }
+        });
+
+        const value = aggValueTotal / weightValueTotal;
+
+        return {
+            value,
+            metricTypeEntity: null,
+            id: null,
+            date: null,
+        };
+    }
 }

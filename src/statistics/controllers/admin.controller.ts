@@ -3,11 +3,10 @@ import { DatabaseAdminitrationService } from '../services/database-adminitration
 
 @Controller('/api/v1/admin')
 export class AdminController {
-  constructor(private administrationService: DatabaseAdminitrationService) {
-  }
+    constructor(private administrationService: DatabaseAdminitrationService) {}
 
-  @Get('/refresh-views')
-  public async refreshViews() {
-    await this.administrationService.refreshMaterializedViews();
-  }
+    @Get('/refresh-views')
+    public async refreshViews() {
+        await this.administrationService.refreshMaterializedViews();
+    }
 }
