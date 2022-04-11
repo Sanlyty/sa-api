@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, HttpModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SystemMetricEntity } from './entities/system-metric.entity';
 import { SystemMetricService } from './services/system-metric.service';
@@ -39,72 +39,73 @@ import { SystemDetailsService } from './services/system-details.service';
 import { StorageEntityDetailsEntity } from './entities/storage-entity-details.entity';
 import { ParityGroupMetricEntity } from './entities/parity-group-metric.entity';
 import { PgMultiValueMetricCollectorService } from './services/collect/pg-multi-value-metric-collector.service';
+import { MaintainerService } from './services/maintainer.service';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature(
-      [
-        SystemMetricEntity,
-        SystemMetricReadEntity,
-        CatMetricTypeEntity,
-        PoolMetricEntity,
-        PoolMetricReadEntity,
-        ChaMetricEntity,
-        ChaMetricReadEntity,
-        HostGroupMetricEntity,
-        PortMetricEntity,
-        PortMetricReadEntity,
-        CatExternalTypeEntity,
-        ExternalEntity,
-        LatencyEntity,
-        CatOperationEntity,
-        StorageEntityEntity,
-        StorageEntityDetailsEntity,
-        ParityGroupMetricEntity,
-        /**
-         * Custom repositories
-         */
-        StorageEntityRepository,
-      ],
-    ),
-  ],
-  providers: [
-    PoolMetricService,
-    SystemMetricService,
-    ChaMetricService,
-    DataCenterService,
-    MetricTypeService,
-    CapacityStatisticsService,
-    PortMetricService,
-    LatencyMetricTransformer,
-    DataCenterService,
-    ExternalService,
-    ExternalTypeService,
-    LatencyMetricService,
-    OperationService,
-    StorageEntityService,
-    MetricCollectorService,
-    MetricRepositoryFactory,
-    MultiValueMetricCollectorService,
-    PgMultiValueMetricCollectorService,
-    SystemDetailsService,
-  ],
-  controllers: [
-    MetricController,
-    ExternalController,
-    StorageEntityController,
-  ],
-  exports: [DataCenterService,
-    CapacityStatisticsService,
-    ChaMetricService,
-    PoolMetricService,
-    PortMetricService,
-    SystemMetricService,
-    DataCenterService,
-    MetricTypeService,
-    LatencyMetricService,
-    StorageEntityService,
-  ],
+    imports: [
+        TypeOrmModule.forFeature([
+            SystemMetricEntity,
+            SystemMetricReadEntity,
+            CatMetricTypeEntity,
+            PoolMetricEntity,
+            PoolMetricReadEntity,
+            ChaMetricEntity,
+            ChaMetricReadEntity,
+            HostGroupMetricEntity,
+            PortMetricEntity,
+            PortMetricReadEntity,
+            CatExternalTypeEntity,
+            ExternalEntity,
+            LatencyEntity,
+            CatOperationEntity,
+            StorageEntityEntity,
+            StorageEntityDetailsEntity,
+            ParityGroupMetricEntity,
+            /**
+             * Custom repositories
+             */
+            StorageEntityRepository,
+        ]),
+        HttpModule,
+    ],
+    providers: [
+        PoolMetricService,
+        SystemMetricService,
+        ChaMetricService,
+        DataCenterService,
+        MetricTypeService,
+        CapacityStatisticsService,
+        PortMetricService,
+        LatencyMetricTransformer,
+        DataCenterService,
+        ExternalService,
+        ExternalTypeService,
+        LatencyMetricService,
+        OperationService,
+        StorageEntityService,
+        MetricCollectorService,
+        MetricRepositoryFactory,
+        MultiValueMetricCollectorService,
+        PgMultiValueMetricCollectorService,
+        SystemDetailsService,
+        MaintainerService,
+    ],
+    controllers: [
+        MetricController,
+        ExternalController,
+        StorageEntityController,
+    ],
+    exports: [
+        DataCenterService,
+        CapacityStatisticsService,
+        ChaMetricService,
+        PoolMetricService,
+        PortMetricService,
+        SystemMetricService,
+        DataCenterService,
+        MetricTypeService,
+        LatencyMetricService,
+        StorageEntityService,
+    ],
 })
-export class CollectorModule {
-}
+export class CollectorModule {}

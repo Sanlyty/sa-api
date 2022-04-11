@@ -6,6 +6,7 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "target": "es6",
+    "lib": [ "ESNext" ],
     "allowJs": false,
     "sourceMap": true,
     "outDir": "./dist",

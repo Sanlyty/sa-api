@@ -27,15 +27,19 @@ export class StorageEntityMetricTransformer {
     ): StorageMetricEntityFlatDto[] {
         return storageEntities.map((storageEntity) => {
             const dto = new StorageMetricEntityFlatDto();
+
             this.transformStorageEntityBase(dto, storageEntity);
+
             if (storageEntity.parent !== undefined) {
                 dto.parent = this.transformStorageEntityBase(
                     new StorageMetricEntityFlatDto(),
                     storageEntity.parent
                 ) as StorageMetricEntityFlatDto;
             }
+
             this.transformMetrics(storageEntity, dto);
             this.transformExternals(storageEntity, dto);
+
             return dto;
         });
     }
@@ -45,19 +49,16 @@ export class StorageEntityMetricTransformer {
     ): StorageMetricEntityHierarchyDto[] {
         return dataCenterPromise.map((storageEntity) => {
             const dto = new StorageMetricEntityHierarchyDto();
+
             this.transformStorageEntityBase(dto, storageEntity);
-            if (
-                storageEntity.children !== undefined &&
-                !isEmpty(storageEntity.children)
-            ) {
-                dto.children = StorageEntityMetricTransformer.transform(
-                    storageEntity.children
-                );
-            } else {
-                dto.children = [];
-            }
+
+            dto.children = StorageEntityMetricTransformer.transform(
+                storageEntity.children ?? []
+            );
+
             this.transformMetrics(storageEntity, dto);
             this.transformExternals(storageEntity, dto);
+
             return dto;
         });
     }
@@ -71,14 +72,13 @@ export class StorageEntityMetricTransformer {
         dto.type = StorageEntityType[storageEntity.idType];
         dto.status = StorageEntityStatus[storageEntity.idCatComponentStatus];
         dto.referenceId = storageEntity.serialNumber;
-        if (
-            storageEntity.detail !== undefined &&
-            storageEntity.detail !== null
-        ) {
+
+        if (Boolean(storageEntity.detail)) {
             dto.detail = StorageEntityTransformer.transformDetail(
                 storageEntity.detail
             );
         }
+
         return dto;
     }
 
@@ -86,37 +86,34 @@ export class StorageEntityMetricTransformer {
         storageEntity: StorageEntityEntity,
         dto: StorageEntityMetricDto
     ) {
-        const externals = storageEntity.externals;
-        if (externals !== undefined && !isEmpty(externals)) {
-            dto.externals = externals.map((externalEntity) =>
-                StorageEntityTransformer.transformExternal(externalEntity)
-            );
-        } else {
-            dto.externals = [];
-        }
+        const { externals } = storageEntity;
+
+        // Transform or empty
+        dto.externals = (externals ?? []).map(
+            StorageEntityTransformer.transformExternal
+        );
     }
 
     private static transformMetrics(
         storageEntity: StorageEntityEntity,
         dto: StorageEntityMetricDto
     ) {
-        if (
-            storageEntity.metrics !== undefined &&
-            !isEmpty(storageEntity.metrics)
-        ) {
-            dto.metrics = storageEntity.metrics.map(
-                StorageEntityMetricTransformer.createSystemMetric
-            );
-        } else {
-            dto.metrics = [];
-        }
+        // Transform or empty
+        dto.metrics = (storageEntity.metrics ?? []).map(
+            StorageEntityMetricTransformer.createSystemMetric
+        );
     }
 
     private static createSystemMetric(
         metric: MetricEntityInterface
     ): SystemMetric {
         const metricDetail = new SystemMetric();
+
         metricDetail.date = metric.date;
+        metricDetail.unit = metric.metricTypeEntity.unit;
+        metricDetail.value = metric.value;
+
+        // *.type
         if (
             StorageEntityMetricTransformer.excludedMetric.some(
                 (type) => type === metric.metricTypeEntity.id
@@ -129,18 +126,19 @@ export class StorageEntityMetricTransformer {
                 ''
             ) as SystemMetricType;
         }
+
         if (
             metric instanceof SystemMetricReadEntity ||
             metric instanceof ParityGroupMetricEntity
         ) {
             metricDetail.peak = metric.peak;
         }
+
         if (metric instanceof ParityGroupMetricEntity) {
             metricDetail.startTime = metric.startTime.getTime();
             metricDetail.endTime = metric.endTime.getTime();
         }
-        metricDetail.unit = metric.metricTypeEntity.unit;
-        metricDetail.value = metric.value;
+
         return metricDetail;
     }
 }

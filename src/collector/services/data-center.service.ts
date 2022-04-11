@@ -20,6 +20,7 @@ import { OutputType } from '../../statistics/controllers/params/statistics.query
 import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.entity';
 import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity';
 import { StatisticParams } from '../../statistics/controllers/params/statistic.params';
+import { MaintainerService } from './maintainer.service';
 
 export enum MetricGroup {
     PERFORMANCE = 1,
@@ -32,22 +33,25 @@ export enum MetricGroup {
 
 @Injectable()
 export class DataCenterService {
-    private readonly regionDataCenters = [];
-
-    constructor(private storageEntityRepository: StorageEntityRepository) {
-        this.regionDataCenters.push({
+    private readonly regionDataCenters = [
+        {
             type: Region.EUROPE,
             datacenterName: ['CZ_Chodov', 'CZ_Sitel'],
-        });
-        this.regionDataCenters.push({
+        },
+        {
             type: Region.ASIA,
             datacenterName: ['MY_AIMS', 'MY_Cyberjaya'],
-        });
-        this.regionDataCenters.push({
+        },
+        {
             type: Region.AMERICA,
             datacenterName: ['US_Ashburn', 'US_Mechanicsburg'],
-        });
-    }
+        },
+    ];
+
+    constructor(
+        private storageEntityRepository: StorageEntityRepository,
+        private maintainerService: MaintainerService
+    ) {}
 
     async findById(idDataCenter: number): Promise<StorageEntityEntity[]> {
         return await this.storageEntityRepository.find({
@@ -62,20 +66,14 @@ export class DataCenterService {
     }
 
     async getDataCenterIdByRegion(region: Region): Promise<number[]> {
-        const foundItem = this.regionDataCenters.find(
-            (regionMapItem) => regionMapItem.type === region
+        const foundItem = this.regionDataCenters.find((i) => i.type === region);
+
+        return await Promise.all(
+            (foundItem?.datacenterName ?? []).map(
+                async (dataCenterName) =>
+                    (await this.findByName(dataCenterName))?.id
+            )
         );
-        if (foundItem != null) {
-            return await Promise.all(
-                foundItem.datacenterName.map(async (dataCenterName) => {
-                    const dc = await this.findByName(dataCenterName);
-                    if (dc !== undefined) {
-                        return dc.id;
-                    }
-                })
-            );
-        }
-        return [];
     }
 
     async getMetricsByGroup(
@@ -90,7 +88,7 @@ export class DataCenterService {
             period,
             statisticParams
         );
-        return dcDao || (await this.getEmptyDatacenter(idDataCenter));
+        return dcDao ?? (await this.getEmptyDatacenter(idDataCenter));
     }
 
     async getPerformanceMetrics(
@@ -128,7 +126,26 @@ export class DataCenterService {
             });
         }
 
-        return query.getMany();
+        const datacenters = await query.getMany();
+
+        for (const datacenter of datacenters) {
+            for (const system of datacenter.children) {
+                // Is configured via a maintainer?
+                if (this.maintainerService.handlesSystem(system.name)) {
+                    for (const metric of system.metrics) {
+                        const response = await this.maintainerService.getLastMaintainerData(
+                            system.name,
+                            metric.metricTypeEntity.name
+                        );
+                        metric.date = response.date;
+                        metric.value = response.cols['average'] ?? 0;
+                        (metric as any).peak = response.cols['peak'] ?? 0;
+                    }
+                }
+            }
+        }
+
+        return datacenters;
     }
 
     async getPoolMetrics(
@@ -312,15 +329,15 @@ export class DataCenterService {
         idDataCenter: number,
         period: PeriodType,
         statisticParams: StatisticParams
-    ): Promise<StorageEntityEntity[]> {
+    ): Promise<StorageEntityEntity[] | undefined> {
         const types: MetricType[] = DataCenterService.resolveMetricTypes(
             metricGroup,
             period
         );
-        let dataCenterIds = [];
-        if (idDataCenter !== null && idDataCenter !== undefined) {
-            dataCenterIds = [idDataCenter];
-        }
+
+        let dataCenterIds =
+            typeof idDataCenter === 'number' ? [idDataCenter] : [];
+
         switch (metricGroup) {
             case MetricGroup.PERFORMANCE:
                 return this.getPerformanceMetrics(types, dataCenterIds);
@@ -339,6 +356,9 @@ export class DataCenterService {
                     statisticParams.fromDate.toString(),
                     statisticParams.toDate.toString()
                 );
+
+            default:
+                return undefined;
         }
     }
 

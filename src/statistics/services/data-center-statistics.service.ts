@@ -38,13 +38,13 @@ export class DataCenterStatisticsService {
             statisticParams
         );
 
-        if (dataCenterEntity !== undefined) {
-            return StorageEntityMetricTransformer.transform(dataCenterEntity);
-        } else {
+        if (!dataCenterEntity) {
             throw new NotFoundException(
                 `No data found DataCenter(${idDataCenter})`
             );
         }
+
+        return StorageEntityMetricTransformer.transform(dataCenterEntity);
     }
 
     async getEntities(
@@ -61,13 +61,14 @@ export class DataCenterStatisticsService {
         );
     }
 
-    // TODO iterate over array of service (with getAlerts) and return all values
     public async getAlerts(): Promise<MetricEntityInterface[]> {
-        return [
-            ...(await this.chaMetricService.getAlerts()),
-            ...(await this.portMetricService.getAlerts()),
-            ...(await this.poolMetricService.getAlerts()),
-            ...(await this.systemMetricService.getAlerts()),
+        const services = [
+            this.chaMetricService,
+            this.portMetricService,
+            this.poolMetricService,
+            this.systemMetricService,
         ];
+
+        return (await Promise.all(services.map((s) => s.getAlerts()))).flat();
     }
 }
