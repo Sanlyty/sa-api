@@ -1,20 +1,32 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import {
+    Controller,
+    Get,
+    Param,
+    Query,
+    NotFoundException,
+} from '@nestjs/common';
 import { DataCenterStatisticsService } from '../services/data-center-statistics.service';
 import {
     DataCenterService,
     MetricGroup,
 } from '../../collector/services/data-center.service';
-import { StatisticParams } from './params/statistic.params';
-import {
-    OutputType,
-    StatisticQueryParams,
-} from './params/statistics.query-params';
+import { StatisticQueryParams } from './params/statistics.query-params';
 import { StorageEntityTransformer } from '../../collector/transformers/storage-entity.transformer';
 import { StorageEntityResponseDto } from '../../collector/dto/storage-entity-response.dto';
 import { StorageEntityMetricTransformer } from '../transformers/storage-entity-metric.transformer';
 import { StorageEntityFilterVo } from '../services/vos/storage-entity-filter.vo';
 import { MetricFilterUtils } from '../utils/metric-filter.utils';
 import { OrderByUtils } from '../utils/vo/order-by.utils';
+import { StatisticParams } from './params/statistic.params';
+
+const metricGroups = {
+    performance: MetricGroup.PERFORMANCE,
+    capacity: MetricGroup.CAPACITY,
+    adapters: MetricGroup.ADAPTERS,
+    sla: MetricGroup.SLA,
+    'host-groups': MetricGroup.HOST_GROUPS,
+    'parity-groups-events': MetricGroup.PARITY_GROUPS,
+};
 
 @Controller('api/v1/datacenters')
 export class DataCenterStatisticsController {
@@ -29,128 +41,48 @@ export class DataCenterStatisticsController {
         return StorageEntityTransformer.transformAll(entities, true, true);
     }
 
-    @Get('performance')
-    performanceStatisticsAll(@Query() queryParams: StatisticQueryParams) {
+    @Get(':metric')
+    getMetricAll(
+        @Param('metric') metric: string,
+        @Query() queryParams: StatisticQueryParams
+    ) {
+        const metricGroup = metricGroups[metric.toLowerCase()];
+
+        if (!metricGroup) {
+            throw new NotFoundException();
+        }
+
         return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.PERFORMANCE,
+            metricGroup,
             null,
-            queryParams.period
+            queryParams.period,
+            {
+                fromDate: queryParams.fromDate,
+                toDate: queryParams.toDate,
+            }
         );
     }
 
-    @Get(':idDataCenter/performance')
-    performanceStatistics(
+    @Get(':idDataCenter/:metric')
+    getMetric(
         @Param('idDataCenter') idDataCenter: number,
+        @Param('metric') metric: string,
         @Query() queryParams: StatisticQueryParams
     ) {
+        const metricGroup = metricGroups[metric.toLowerCase()];
+
+        if (!metricGroup) {
+            throw new NotFoundException();
+        }
+
         return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.PERFORMANCE,
+            metricGroup,
             idDataCenter,
-            queryParams.period
-        );
-    }
-
-    @Get('capacity')
-    capacityStatisticsAll(@Query() queryParams: StatisticQueryParams) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.CAPACITY
-        );
-    }
-
-    @Get(':idDataCenter/capacity')
-    capacityStatistics(
-        @Param('idDataCenter') idDataCenter: number,
-        @Query() queryParams: StatisticQueryParams
-    ) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.CAPACITY,
-            idDataCenter
-        );
-    }
-
-    @Get('adapters')
-    channelAdaptersStatisticsAll(
-        @Param() params: StatisticParams,
-        @Query() queryParams: StatisticQueryParams
-    ) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.ADAPTERS,
-            null,
-            queryParams.period
-        );
-    }
-
-    @Get(':idDataCenter/adapters')
-    channelAdaptersStatistics(
-        @Param('idDataCenter') idDataCenter: number,
-        @Query() queryParams: StatisticQueryParams
-    ) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.ADAPTERS,
-            idDataCenter,
-            queryParams.period
-        );
-    }
-
-    @Get('sla')
-    slaStatisticsAll(@Query() queryParams: StatisticQueryParams) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.SLA,
-            null,
-            queryParams.period
-        );
-    }
-
-    @Get(':idDataCenter/sla')
-    slaStatistics(
-        @Param('idDataCenter') idDataCenter: number,
-        @Query() queryParams: StatisticQueryParams
-    ) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.SLA,
-            idDataCenter,
-            queryParams.period
-        );
-    }
-
-    @Get('host-groups')
-    hostGroupStatisticsAll(@Query() queryParams: StatisticQueryParams) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.HOST_GROUPS
-        );
-    }
-
-    @Get(':idDataCenter/host-groups')
-    hostGroupStatistics(
-        @Param('idDataCenter') idDataCenter: number,
-        @Query() queryParams: StatisticQueryParams
-    ) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.HOST_GROUPS,
-            idDataCenter
-        );
-    }
-
-    @Get('parity-groups/events')
-    parityGroupEventsAll(@Query() queryParams: StatisticParams) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.PARITY_GROUPS,
-            null,
-            null,
-            queryParams
-        );
-    }
-
-    @Get(':idDataCenter/parity-groups/events')
-    parityGroupEvents(
-        @Param('idDataCenter') idDataCenter: number,
-        @Query() params: StatisticParams
-    ) {
-        return this.dataCenterStatisticsService.getMetricByIdDataCenter(
-            MetricGroup.PARITY_GROUPS,
-            idDataCenter,
-            null,
-            params
+            queryParams.period,
+            {
+                fromDate: queryParams.fromDate,
+                toDate: queryParams.toDate,
+            }
         );
     }
 
@@ -168,12 +100,9 @@ export class DataCenterStatisticsController {
             filter,
             queryParams.output
         );
-        return this.isFlatOutput(queryParams)
+
+        return queryParams?.output === 'FLAT'
             ? StorageEntityMetricTransformer.transformFlat(filteredResult)
             : StorageEntityMetricTransformer.transform(filteredResult);
-    }
-
-    isFlatOutput(queryParams: StatisticQueryParams) {
-        return queryParams?.output === 'FLAT';
     }
 }

@@ -10,7 +10,6 @@ import { MetricEntityInterface } from '../../collector/entities/metric-entity.in
 import { SystemMetricService } from '../../collector/services/system-metric.service';
 import { PeriodType } from '../../collector/enums/period-type.enum';
 import { PortMetricService } from '../../collector/services/port-metric.service';
-import { StorageEntityEntity } from '../../collector/entities/storage-entity.entity';
 import { StorageMetricEntityHierarchyDto } from '../models/dtos/storage-metric-entity-hierarchy.dto';
 import { StatisticParams } from '../controllers/params/statistic.params';
 
@@ -31,7 +30,7 @@ export class DataCenterStatisticsService {
         period?: PeriodType,
         statisticParams?: StatisticParams
     ): Promise<StorageMetricEntityHierarchyDto[]> {
-        const dataCenterEntity = await this.getEntities(
+        const dataCenterEntity = await this.dataCenterService.getMetricsByGroup(
             metricGroup,
             idDataCenter,
             period,
@@ -45,20 +44,6 @@ export class DataCenterStatisticsService {
         }
 
         return StorageEntityMetricTransformer.transform(dataCenterEntity);
-    }
-
-    async getEntities(
-        metricGroup: MetricGroup,
-        idDataCenter: number,
-        period: PeriodType,
-        statisticParams: StatisticParams
-    ): Promise<StorageEntityEntity[]> {
-        return await this.dataCenterService.getMetricsByGroup(
-            metricGroup,
-            idDataCenter,
-            period,
-            statisticParams
-        );
     }
 
     public async getAlerts(): Promise<MetricEntityInterface[]> {

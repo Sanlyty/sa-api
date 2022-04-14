@@ -21,8 +21,9 @@ import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.e
 import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity';
 import { StatisticParams } from '../../statistics/controllers/params/statistic.params';
 import { MaintainerService } from './maintainer.service';
+import metricTypeMap from './metric-type-map';
 
-export enum MetricGroup {
+export const enum MetricGroup {
     PERFORMANCE = 1,
     CAPACITY = 2,
     ADAPTERS = 3,
@@ -31,42 +32,42 @@ export enum MetricGroup {
     PARITY_GROUPS = 6,
 }
 
+const regionDataCenters = [
+    {
+        type: Region.EUROPE,
+        datacenterName: ['CZ_Chodov', 'CZ_Sitel'],
+    },
+    {
+        type: Region.ASIA,
+        datacenterName: ['MY_AIMS', 'MY_Cyberjaya'],
+    },
+    {
+        type: Region.AMERICA,
+        datacenterName: ['US_Ashburn', 'US_Mechanicsburg'],
+    },
+];
+
 @Injectable()
 export class DataCenterService {
-    private readonly regionDataCenters = [
-        {
-            type: Region.EUROPE,
-            datacenterName: ['CZ_Chodov', 'CZ_Sitel'],
-        },
-        {
-            type: Region.ASIA,
-            datacenterName: ['MY_AIMS', 'MY_Cyberjaya'],
-        },
-        {
-            type: Region.AMERICA,
-            datacenterName: ['US_Ashburn', 'US_Mechanicsburg'],
-        },
-    ];
-
     constructor(
-        private storageEntityRepository: StorageEntityRepository,
+        private entityRepo: StorageEntityRepository,
         private maintainerService: MaintainerService
     ) {}
 
-    async findById(idDataCenter: number): Promise<StorageEntityEntity[]> {
-        return await this.storageEntityRepository.find({
-            where: { id: idDataCenter },
+    async findById(id: number): Promise<StorageEntityEntity[]> {
+        return await this.entityRepo.find({
+            where: { id },
         });
     }
 
-    async findByName(dcName: string): Promise<StorageEntityEntity> {
-        return await this.storageEntityRepository.findOne({
-            where: { name: dcName },
+    async findByName(name: string): Promise<StorageEntityEntity> {
+        return await this.entityRepo.findOne({
+            where: { name },
         });
     }
 
     async getDataCenterIdByRegion(region: Region): Promise<number[]> {
-        const foundItem = this.regionDataCenters.find((i) => i.type === region);
+        const foundItem = regionDataCenters.find((i) => i.type === region);
 
         return await Promise.all(
             (foundItem?.datacenterName ?? []).map(
@@ -76,26 +77,55 @@ export class DataCenterService {
         );
     }
 
+    getEmptyDatacenter(
+        idDataCenterParam: number
+    ): Promise<StorageEntityEntity[]> {
+        return this.findById(idDataCenterParam);
+    }
+
+    async getAllDataCenters(): Promise<StorageEntityEntity[]> {
+        return await this.entityRepo.findDataCenters();
+    }
+
     async getMetricsByGroup(
         metricGroup: MetricGroup,
         idDataCenter: number,
         period: PeriodType,
         statisticParams: StatisticParams
     ): Promise<StorageEntityEntity[]> {
-        const dcDao = await this.loadMetrics(
-            metricGroup,
-            idDataCenter,
-            period,
-            statisticParams
-        );
-        return dcDao ?? (await this.getEmptyDatacenter(idDataCenter));
+        const types = DataCenterService.resolveMetricTypes(metricGroup, period);
+
+        let dataCenterIds =
+            idDataCenter || idDataCenter === 0 ? [idDataCenter] : [];
+
+        switch (metricGroup) {
+            case MetricGroup.PERFORMANCE:
+                return this.getPerformanceMetrics(types, dataCenterIds);
+            case MetricGroup.CAPACITY:
+            case MetricGroup.SLA:
+                return this.getPoolMetrics(types, dataCenterIds);
+            case MetricGroup.ADAPTERS:
+                return this.getChannelAdapterMetrics(types, dataCenterIds);
+            case MetricGroup.HOST_GROUPS: // TODO:
+                return this.getHostGroupMetrics(types, dataCenterIds);
+            case MetricGroup.PARITY_GROUPS: // TODO:
+                return this.getParityGroupsEvents(
+                    types,
+                    dataCenterIds,
+                    statisticParams.fromDate.toString(),
+                    statisticParams.toDate.toString()
+                );
+
+            default:
+                return await this.getEmptyDatacenter(idDataCenter);
+        }
     }
 
     async getPerformanceMetrics(
         metricTypes: MetricType[],
         idDataCenterParam: number[]
     ): Promise<StorageEntityEntity[]> {
-        const query = this.storageEntityRepository
+        const query = this.entityRepo
             .createQueryBuilder('datacenter')
             .leftJoinAndSelect(
                 'datacenter.children',
@@ -152,7 +182,7 @@ export class DataCenterService {
         metricTypes: MetricType[],
         idDataCenterParam: number[]
     ): Promise<StorageEntityEntity[]> {
-        const query = this.storageEntityRepository
+        const query = this.entityRepo
             .createQueryBuilder('datacenter')
             .leftJoinAndSelect(
                 'datacenter.children',
@@ -189,19 +219,51 @@ export class DataCenterService {
             .andWhere('datacenter.idType = :dataCenterType', {
                 dataCenterType: StorageEntityType.DATACENTER,
             });
+
         if (idDataCenterParam.length > 0) {
             query.andWhere('datacenter.id IN (:...idDatacenter)', {
                 idDatacenter: idDataCenterParam,
             });
         }
-        return await query.getMany();
+
+        const datacenters = await query.getMany();
+
+        for (const datacenter of datacenters) {
+            for (const system of datacenter.children) {
+                // Is configured via a maintainer?
+                if (this.maintainerService.handlesSystem(system.name)) {
+                    for (const pool of system.children) {
+                        console.log(pool.serialNumber);
+                        for (const metric of pool.metrics) {
+                            if (
+                                !metric.metricTypeEntity.name.startsWith(
+                                    'OUT_OF_SLA'
+                                )
+                            ) {
+                                const response = await this.maintainerService.getLastMaintainerData(
+                                    system.name,
+                                    metric.metricTypeEntity.name
+                                );
+                                metric.date = response.date;
+                                metric.value =
+                                    response.cols[pool.serialNumber] ??
+                                    response.cols[pool.name] ??
+                                    0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return datacenters;
     }
 
-    getChannelAdapterMetrics(
+    async getChannelAdapterMetrics(
         metricTypes: MetricType[],
         idDataCenterParam: number[]
     ): Promise<StorageEntityEntity[]> {
-        const query = this.storageEntityRepository
+        const query = this.entityRepo
             .createQueryBuilder('datacenter')
             .innerJoinAndSelect(
                 'datacenter.children',
@@ -263,14 +325,56 @@ export class DataCenterService {
                 idDatacenter: idDataCenterParam,
             });
         }
-        return query.getMany();
+
+        const datacenters = await query.getMany();
+
+        const longPortGroupName = (portGroup: string) =>
+            portGroup
+                .split(',')
+                .map((port) => `CL${port.slice(0, -1)}-${port.slice(-1)}`)
+                .join(',');
+
+        for (const datacenter of datacenters) {
+            for (const system of datacenter.children) {
+                // Is configured via a maintainer?
+                if (this.maintainerService.handlesSystem(system.name)) {
+                    for (const adapterGroup of system.children) {
+                        for (const metric of adapterGroup.metrics) {
+                            const response = await this.maintainerService.getLastMaintainerData(
+                                system.name,
+                                metric.metricTypeEntity.name
+                            );
+                            metric.date = response.date;
+                            metric.value =
+                                response.cols[adapterGroup.name] ?? 0;
+                        }
+
+                        for (const portGroup of adapterGroup.children) {
+                            for (const metric of portGroup.metrics) {
+                                const response = await this.maintainerService.getLastMaintainerData(
+                                    system.name,
+                                    metric.metricTypeEntity.name
+                                );
+                                metric.date = response.date;
+                                metric.value =
+                                    response.cols[
+                                        longPortGroupName(portGroup.name)
+                                    ] ?? 0;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return datacenters;
     }
 
-    getHostGroupMetrics(
+    async getHostGroupMetrics(
         metricTypes: MetricType[],
         idDataCenterParam: number[]
     ): Promise<StorageEntityEntity[]> {
-        const query = this.storageEntityRepository
+        const query = this.entityRepo
             .createQueryBuilder('datacenter')
             .innerJoinAndSelect(
                 'datacenter.children',
@@ -311,181 +415,42 @@ export class DataCenterService {
             });
         }
 
-        return query.getMany();
-    }
+        const datacenters = await query.getMany();
 
-    getEmptyDatacenter(
-        idDataCenterParam: number
-    ): Promise<StorageEntityEntity[]> {
-        return this.findById(idDataCenterParam);
-    }
-
-    async getAllDataCenters(): Promise<StorageEntityEntity[]> {
-        return await this.storageEntityRepository.findDataCenters();
-    }
-
-    private loadMetrics(
-        metricGroup: MetricGroup,
-        idDataCenter: number,
-        period: PeriodType,
-        statisticParams: StatisticParams
-    ): Promise<StorageEntityEntity[] | undefined> {
-        const types: MetricType[] = DataCenterService.resolveMetricTypes(
-            metricGroup,
-            period
-        );
-
-        let dataCenterIds =
-            typeof idDataCenter === 'number' ? [idDataCenter] : [];
-
-        switch (metricGroup) {
-            case MetricGroup.PERFORMANCE:
-                return this.getPerformanceMetrics(types, dataCenterIds);
-            case MetricGroup.CAPACITY:
-                return this.getPoolMetrics(types, dataCenterIds);
-            case MetricGroup.ADAPTERS:
-                return this.getChannelAdapterMetrics(types, dataCenterIds);
-            case MetricGroup.SLA:
-                return this.getPoolMetrics(types, dataCenterIds);
-            case MetricGroup.HOST_GROUPS:
-                return this.getHostGroupMetrics(types, dataCenterIds);
-            case MetricGroup.PARITY_GROUPS:
-                return this.getParityGroupsEvents(
-                    types,
-                    dataCenterIds,
-                    statisticParams.fromDate.toString(),
-                    statisticParams.toDate.toString()
-                );
-
-            default:
-                return undefined;
+        for (const datacenter of datacenters) {
+            for (const system of datacenter.children) {
+                // Is configured via a maintainer?
+                if (this.maintainerService.handlesSystem(system.name)) {
+                    for (const hostGroup of system.children) {
+                        for (const metric of hostGroup.metrics) {
+                            const response = await this.maintainerService.getLastMaintainerData(
+                                system.name,
+                                'VMW_' + metric.metricTypeEntity.name
+                            );
+                            metric.date = response.date;
+                            metric.value = response.cols[hostGroup.name] ?? 0;
+                        }
+                    }
+                }
+            }
         }
+
+        return datacenters;
     }
 
     private static resolveMetricTypes(
         metricGroup: MetricGroup,
-        period: PeriodType
+        period?: PeriodType
     ): MetricType[] {
-        let periodType = period;
-        if (period == null) {
-            periodType = PeriodType.DAY;
-        }
-        const metrics = [];
-        metrics[MetricGroup.PERFORMANCE] = [];
-        metrics[MetricGroup.PERFORMANCE][PeriodType.DAY] = [
-            MetricType.WORKLOAD,
-            MetricType.TRANSFER,
-            MetricType.RESPONSE,
-            MetricType.CPU_PERC,
-            MetricType.HDD_PERC,
-            MetricType.WRITE_PENDING_PERC,
-        ];
-        metrics[MetricGroup.PERFORMANCE][PeriodType.MONTH] = [
-            MetricType.WORKLOAD_MONTH,
-            MetricType.TRANSFER_MONTH,
-            MetricType.RESPONSE_MONTH,
-            MetricType.CPU_PERC_MONTH,
-            MetricType.HDD_PERC_MONTH,
-            MetricType.WRITE_PENDING_PERC_MONTH,
-        ];
-        metrics[MetricGroup.PERFORMANCE][PeriodType.WEEK] = [
-            MetricType.WORKLOAD_WEEK,
-            MetricType.TRANSFER_WEEK,
-            MetricType.RESPONSE_WEEK,
-            MetricType.CPU_PERC_WEEK,
-            MetricType.HDD_PERC_WEEK,
-            MetricType.WRITE_PENDING_PERC_WEEK,
-        ];
-        metrics[MetricGroup.CAPACITY] = [];
-        metrics[MetricGroup.CAPACITY][PeriodType.DAY] = [
-            MetricType.PHYSICAL_CAPACITY,
-            MetricType.PHYSICAL_SUBS_PERC,
-            MetricType.AVAILABLE_CAPACITY,
-            MetricType.LOGICAL_USED_PERC,
-            MetricType.PHYSICAL_USED_PERC,
-            MetricType.COMPRESSION_RATIO,
-            MetricType.CHANGE_DAY,
-            MetricType.CHANGE_MONTH,
-            MetricType.CHANGE_WEEK,
-            MetricType.PREDICTION_L1,
-            MetricType.PREDICTION_L2,
-            MetricType.PREDICTION_L3,
-            MetricType.CHANGE_DAY,
-            MetricType.CHANGE_WEEK,
-            MetricType.CHANGE_MONTH,
-            MetricType.PHYSICAL_USED,
-            MetricType.PHYSICAL_FREE,
-            MetricType.LOGICAL_CAPACITY,
-            MetricType.LOGICAL_USED,
-            MetricType.LOGICAL_FREE,
-            MetricType.NET_TOTAL,
-            MetricType.NET_USED,
-            MetricType.NET_FREE,
-            MetricType.PHY_USED_BEF_SAVING,
-            MetricType.DEDUP_RATIO,
-            MetricType.TOTAL_SAVING_EFFECT,
-            MetricType.SUBSCRIBED_CAPACITY,
-            MetricType.LOGICAL_SUBS_PERC,
-            MetricType.NET_SUBS_PERC,
-            MetricType.NET_USED_PERC,
-        ];
-        metrics[MetricGroup.ADAPTERS] = [];
-        metrics[MetricGroup.ADAPTERS][PeriodType.DAY] = [
-            MetricType.IMBALANCE_EVENTS,
-            MetricType.IMBALANCE_ABSOLUT,
-            MetricType.IMBALANCE_PERC,
-            MetricType.PORT_IMBALANCE_EVENTS,
-            MetricType.PORT_IMBALANCE_ABSOLUT,
-            MetricType.PORT_IMBALANCE_PERC,
-        ];
-        metrics[MetricGroup.ADAPTERS][PeriodType.WEEK] = [
-            MetricType.IMBALANCE_EVENTS_WEEK,
-            MetricType.IMBALANCE_ABSOLUT_WEEK,
-            MetricType.IMBALANCE_PERC_WEEK,
-            MetricType.PORT_IMBALANCE_EVENTS_WEEK,
-            MetricType.PORT_IMBALANCE_ABSOLUT_WEEK,
-            MetricType.PORT_IMBALANCE_PERC_WEEK,
-        ];
-        metrics[MetricGroup.ADAPTERS][PeriodType.MONTH] = [
-            MetricType.IMBALANCE_EVENTS_MONTH,
-            MetricType.IMBALANCE_ABSOLUT_MONTH,
-            MetricType.IMBALANCE_PERC_MONTH,
-            MetricType.PORT_IMBALANCE_EVENTS_MONTH,
-            MetricType.PORT_IMBALANCE_ABSOLUT_MONTH,
-            MetricType.PORT_IMBALANCE_PERC_MONTH,
-        ];
-        metrics[MetricGroup.SLA] = [];
-        metrics[MetricGroup.SLA][PeriodType.DAY] = [
-            MetricType.SLA_EVENTS,
-            MetricType.OUT_OF_SLA_TIME,
-        ];
-        metrics[MetricGroup.SLA][PeriodType.WEEK] = [
-            MetricType.SLA_EVENTS_WEEK,
-            MetricType.OUT_OF_SLA_TIME_WEEK,
-        ];
-        metrics[MetricGroup.SLA][PeriodType.MONTH] = [
-            MetricType.SLA_EVENTS_MONTH,
-            MetricType.OUT_OF_SLA_TIME_MONTH,
-        ];
-        metrics[MetricGroup.HOST_GROUPS] = [];
-        metrics[MetricGroup.HOST_GROUPS][PeriodType.DAY] = [
-            MetricType.NET_TOTAL,
-            MetricType.NET_USED,
-            MetricType.NET_USED_PERC,
-            MetricType.CHANGE_DAY,
-            MetricType.CHANGE_WEEK,
-            MetricType.CHANGE_MONTH,
-        ];
-        metrics[MetricGroup.PARITY_GROUPS] = [];
-        metrics[MetricGroup.PARITY_GROUPS][PeriodType.DAY] = [
-            MetricType.HDD_PERC,
-        ];
-        if (metrics[metricGroup][periodType] == null) {
+        let mapEntry = metricTypeMap[metricGroup][period ?? 'DAY'];
+
+        if (!Array.isArray(mapEntry) || mapEntry.length === 0) {
             throw new BadRequestException(
                 `Wrong metric group ${metricGroup} when resolving set of metric types`
             );
         }
-        return metrics[metricGroup][periodType];
+
+        return mapEntry;
     }
 
     public async getPoolsById(
@@ -495,7 +460,7 @@ export class DataCenterService {
     ): Promise<StorageEntityEntity[]> {
         let query;
         if (output === 'HIERARCHY') {
-            query = this.storageEntityRepository
+            query = this.entityRepo
                 .createQueryBuilder('datacenter')
                 .leftJoinAndSelect(
                     'datacenter.children',
@@ -510,7 +475,7 @@ export class DataCenterService {
                     { poolType: StorageEntityType.POOL }
                 );
         } else {
-            query = this.storageEntityRepository
+            query = this.entityRepo
                 .createQueryBuilder('pool')
                 .innerJoinAndSelect(
                     'pool.parent',
@@ -549,7 +514,7 @@ export class DataCenterService {
         filter: StorageEntityFilterVo,
         output: OutputType
     ): Promise<StorageEntityEntity[]> {
-        const query = this.storageEntityRepository
+        const query = this.entityRepo
             .createQueryBuilder('pool')
             .select('pool.id', 'id')
             .distinctOn(['pool.id'])
@@ -598,7 +563,7 @@ export class DataCenterService {
         fromDate: string,
         toDate: string
     ) {
-        const query = this.storageEntityRepository
+        const query = this.entityRepo
             .createQueryBuilder('datacenter')
             .innerJoinAndSelect(
                 'datacenter.children',

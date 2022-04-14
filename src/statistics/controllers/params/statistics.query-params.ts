@@ -11,4 +11,7 @@ export class StatisticQueryParams {
     referenceId: string[];
     tier: string[];
     output: OutputType = 'FLAT';
+
+    fromDate?: number;
+    toDate?: number;
 }
