@@ -113,7 +113,7 @@ export class MaintainerService {
 
                         const metricName = m.metricTypeEntity.name;
 
-                        // ? Why not check for key in metricData
+                        // ? Why not check for key in 'metricData'
                         // ! The assignment is after an await point -> redundant calls
                         if (!known.has(metricName)) {
                             known.add(metricName);
@@ -133,11 +133,14 @@ export class MaintainerService {
                 )
             );
         }
+
         entities.forEach((e) => {
+            // Retain skipped metrics
             e.metrics = e.metrics.filter(
                 (m) => options?.skipMetric && options.skipMetric(m)
             );
 
+            //  Fill in obtained metrics
             e.metrics.push(
                 ...Object.keys(metricData).map((metricId) => {
                     const mData = metricData[metricId];
@@ -156,6 +159,7 @@ export class MaintainerService {
                             mData.data.cols[dataKeySelector(e, metricId)] ?? 0,
                     };
 
+                    // Assign additional keys other than 'value'
                     for (const additional in options?.additionalKeys) {
                         result[additional] =
                             mData.data.cols[
