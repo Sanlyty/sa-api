@@ -1,5 +1,8 @@
 import { Injectable, HttpService } from '@nestjs/common';
 import { readFileSync } from 'fs';
+import { StorageEntityEntity } from '../entities/storage-entity.entity';
+import { MetricGroup } from './data-center.service';
+import { MetricEntityInterface } from '../entities/metric-entity.interface';
 
 const metricNameMap: Record<string, string> = {
     RESPONSE: 'RESPONSE_READ_DAY',
@@ -13,9 +16,9 @@ const metricNameMap: Record<string, string> = {
     PHYSICAL_FREE: 'AVAILABLE_CAPACITY',
 
     // TODO: figure out these
-    VMW_CHANGE_DAY: 'PHYSICAL_CAPACITY_DAY',
-    VMW_CHANGE_WEEK: 'PHYSICAL_CAPACITY_WEEK',
-    VMW_CHANGE_MONTH: 'PHYSICAL_CAPACITY_MONTH',
+    VMW_CHANGE_DAY: 'VMW_NET_USED_DAY',
+    VMW_CHANGE_WEEK: 'VMW_NET_USED_WEEK',
+    VMW_CHANGE_MONTH: 'VMW_NET_USED_MONTH',
 
     // TODO:
     SLA_EVENTS_DAY: 'SLA_EVENTS',
@@ -63,16 +66,115 @@ export class MaintainerService {
                   })
               )
             : {};
-        console.log(this.maintainerMap);
     }
 
     public handlesSystem(id: string): boolean {
         return id in this.maintainerMap;
     }
 
+    public async getMetricsForEntities(
+        systemId: string,
+        entities: StorageEntityEntity[],
+        dataKeySelector: MetricColSelector,
+        options?: {
+            additionalKeys?: Record<string, MetricColSelector>;
+            metrics?: {
+                id: string;
+                unit: string;
+            }[];
+            metricNameTransform?: (m: string) => string;
+            skipMetric?: (m: MetricEntityInterface) => boolean;
+        }
+    ) {
+        let metricData: Record<
+            string,
+            { data: LastMaintainerData; unit: string }
+        > = {};
+
+        if (options?.metrics) {
+            // Preset metrics
+
+            for (const metric of options.metrics) {
+                metric[metric.id] = {
+                    data: await this.getLastMaintainerData(systemId, metric.id),
+                    unit: metric.unit,
+                };
+            }
+        } else {
+            // Autodetect metrics
+
+            let known: Set<string> = new Set();
+            await Promise.all(
+                entities.flatMap((e) =>
+                    e.metrics.map(async (m) => {
+                        if (options?.skipMetric && options.skipMetric(m)) {
+                            return;
+                        }
+
+                        const metricName = m.metricTypeEntity.name;
+
+                        // ? Why not check for key in metricData
+                        // ! The assignment is after an await point -> redundant calls
+                        if (!known.has(metricName)) {
+                            known.add(metricName);
+                            metricData[metricName] = {
+                                data: await this.getLastMaintainerData(
+                                    systemId,
+                                    options?.metricNameTransform
+                                        ? options.metricNameTransform(
+                                              metricName
+                                          )
+                                        : metricName
+                                ),
+                                unit: m.metricTypeEntity.unit,
+                            };
+                        }
+                    })
+                )
+            );
+        }
+        entities.forEach((e) => {
+            e.metrics = e.metrics.filter(
+                (m) => options?.skipMetric && options.skipMetric(m)
+            );
+
+            e.metrics.push(
+                ...Object.keys(metricData).map((metricId) => {
+                    const mData = metricData[metricId];
+
+                    const result = {
+                        id: -1,
+                        metricTypeEntity: {
+                            id: -1,
+                            name: metricId,
+                            unit: mData.unit,
+                            threshold: undefined as any,
+                            idCatMetricGroup: undefined as any,
+                        },
+                        date: mData.data.date,
+                        value:
+                            mData.data.cols[dataKeySelector(e, metricId)] ?? 0,
+                    };
+
+                    for (const additional in options?.additionalKeys) {
+                        result[additional] =
+                            mData.data.cols[
+                                options.additionalKeys[additional](e, metricId)
+                            ] ?? 0;
+                    }
+
+                    return result;
+                })
+            );
+        });
+    }
+
     public async getLastMaintainerData(
         id: string,
-        metric: string
+        metric: string,
+        options?: {
+            variants?: string[];
+        }
     ): Promise<LastMaintainerData | undefined> {
         if (!this.handlesSystem(id)) {
             return undefined;
@@ -88,15 +190,17 @@ export class MaintainerService {
                 .toPromise()
         ).data.dataranges.reverse()[0][1];
 
-        const variants = (
-            await this.httpService
-                .post(`${maintainerUrl}features/variant_recommend`, {
-                    id: metric,
-                    from: (lastDate - 1).toString(),
-                    to: lastDate.toString(),
-                })
-                .toPromise()
-        ).data;
+        const variants =
+            options?.variants ??
+            (
+                await this.httpService
+                    .post(`${maintainerUrl}features/variant_recommend`, {
+                        id: metric,
+                        from: (lastDate - 1).toString(),
+                        to: lastDate.toString(),
+                    })
+                    .toPromise()
+            ).data;
 
         console.log(variants);
 
@@ -124,3 +228,5 @@ type LastMaintainerData = {
     date: Date;
     cols: Record<string, number>;
 };
+
+type MetricColSelector = (e: StorageEntityEntity, metricName: string) => string;

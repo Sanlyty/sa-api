@@ -22,6 +22,7 @@ import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity'
 import { StatisticParams } from '../../statistics/controllers/params/statistic.params';
 import { MaintainerService } from './maintainer.service';
 import metricTypeMap from './metric-type-map';
+import { MetricEntityInterface } from '../entities/metric-entity.interface';
 
 export const enum MetricGroup {
     PERFORMANCE = 1,
@@ -162,15 +163,12 @@ export class DataCenterService {
             for (const system of datacenter.children) {
                 // Is configured via a maintainer?
                 if (this.maintainerService.handlesSystem(system.name)) {
-                    for (const metric of system.metrics) {
-                        const response = await this.maintainerService.getLastMaintainerData(
-                            system.name,
-                            metric.metricTypeEntity.name
-                        );
-                        metric.date = response.date;
-                        metric.value = response.cols['average'] ?? 0;
-                        (metric as any).peak = response.cols['peak'] ?? 0;
-                    }
+                    await this.maintainerService.getMetricsForEntities(
+                        system.name,
+                        [system],
+                        () => 'average',
+                        { additionalKeys: { peak: () => 'peak' } }
+                    );
                 }
             }
         }
@@ -232,26 +230,17 @@ export class DataCenterService {
             for (const system of datacenter.children) {
                 // Is configured via a maintainer?
                 if (this.maintainerService.handlesSystem(system.name)) {
-                    for (const pool of system.children) {
-                        console.log(pool.serialNumber);
-                        for (const metric of pool.metrics) {
-                            if (
-                                !metric.metricTypeEntity.name.startsWith(
+                    await this.maintainerService.getMetricsForEntities(
+                        system.name,
+                        system.children, // Pools
+                        (e) => e.serialNumber,
+                        {
+                            skipMetric: (m) =>
+                                m.metricTypeEntity.name.startsWith(
                                     'OUT_OF_SLA'
-                                )
-                            ) {
-                                const response = await this.maintainerService.getLastMaintainerData(
-                                    system.name,
-                                    metric.metricTypeEntity.name
-                                );
-                                metric.date = response.date;
-                                metric.value =
-                                    response.cols[pool.serialNumber] ??
-                                    response.cols[pool.name] ??
-                                    0;
-                            }
+                                ),
                         }
-                    }
+                    );
                 }
             }
         }
@@ -338,31 +327,17 @@ export class DataCenterService {
             for (const system of datacenter.children) {
                 // Is configured via a maintainer?
                 if (this.maintainerService.handlesSystem(system.name)) {
-                    for (const adapterGroup of system.children) {
-                        for (const metric of adapterGroup.metrics) {
-                            const response = await this.maintainerService.getLastMaintainerData(
-                                system.name,
-                                metric.metricTypeEntity.name
-                            );
-                            metric.date = response.date;
-                            metric.value =
-                                response.cols[adapterGroup.name] ?? 0;
-                        }
+                    await this.maintainerService.getMetricsForEntities(
+                        system.name,
+                        system.children, // AdapterGroups
+                        (e) => e.name
+                    );
 
-                        for (const portGroup of adapterGroup.children) {
-                            for (const metric of portGroup.metrics) {
-                                const response = await this.maintainerService.getLastMaintainerData(
-                                    system.name,
-                                    metric.metricTypeEntity.name
-                                );
-                                metric.date = response.date;
-                                metric.value =
-                                    response.cols[
-                                        longPortGroupName(portGroup.name)
-                                    ] ?? 0;
-                            }
-                        }
-                    }
+                    await this.maintainerService.getMetricsForEntities(
+                        system.name,
+                        system.children.flatMap((c) => c.children), // PortGroups
+                        (e) => longPortGroupName(e.name)
+                    );
                 }
             }
         }
@@ -421,16 +396,14 @@ export class DataCenterService {
             for (const system of datacenter.children) {
                 // Is configured via a maintainer?
                 if (this.maintainerService.handlesSystem(system.name)) {
-                    for (const hostGroup of system.children) {
-                        for (const metric of hostGroup.metrics) {
-                            const response = await this.maintainerService.getLastMaintainerData(
-                                system.name,
-                                'VMW_' + metric.metricTypeEntity.name
-                            );
-                            metric.date = response.date;
-                            metric.value = response.cols[hostGroup.name] ?? 0;
+                    await this.maintainerService.getMetricsForEntities(
+                        system.name,
+                        system.children, // HostGroups
+                        (e) => e.name,
+                        {
+                            metricNameTransform: (n) => 'VMW_' + n,
                         }
-                    }
+                    );
                 }
             }
         }

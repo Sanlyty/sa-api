@@ -127,11 +127,8 @@ export class StorageEntityMetricTransformer {
             ) as SystemMetricType;
         }
 
-        if (
-            metric instanceof SystemMetricReadEntity ||
-            metric instanceof ParityGroupMetricEntity
-        ) {
-            metricDetail.peak = metric.peak;
+        if ('peak' in metric) {
+            metricDetail.peak = metric['peak'];
         }
 
         if (metric instanceof ParityGroupMetricEntity) {

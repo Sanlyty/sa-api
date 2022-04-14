@@ -14,35 +14,47 @@ import { StorageEntityTransformer } from './storage-entity.transformer';
 import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity';
 
 export class MetricTransformer {
+    public static transform(
+        metricEntity:
+            | SystemMetricEntity
+            | PoolMetricEntity
+            | ChaMetricEntity
+            | PortMetricEntity
+            | HostGroupMetricEntity
+            | LatencyEntity
+            | ParityGroupMetricEntity
+    ): MetricResponseDto {
+        const dto = new MetricResponseDto();
 
-  public static transform(metricEntity: SystemMetricEntity | PoolMetricEntity |
-    ChaMetricEntity | PortMetricEntity | HostGroupMetricEntity | LatencyEntity | ParityGroupMetricEntity):
-    MetricResponseDto {
-    const dto = new MetricResponseDto();
+        dto.idMetric = metricEntity.id;
+        dto.metricType = MetricTransformer.transformMetricType(
+            metricEntity.idType
+        );
+        dto.value = metricEntity.value;
 
-    dto.idMetric = metricEntity.id;
-    dto.metricType = MetricTransformer.transformMetricType(metricEntity.idType);
-    dto.value = metricEntity.value;
+        if ('peak' in metricEntity) {
+            dto.peak = metricEntity.peak;
+        }
+        if (metricEntity instanceof ParityGroupMetricEntity) {
+            dto.startTime = metricEntity.startTime.getTime();
+            dto.endTime = metricEntity.endTime.getTime();
+            dto.peak = metricEntity.peak;
+        } else {
+            dto.date = metricEntity.date;
+        }
+        dto.owner = StorageEntityTransformer.transformFromOwner(
+            metricEntity.owner
+        );
 
-    if (metricEntity instanceof SystemMetricEntity && metricEntity.peak !== undefined) {
-      dto.peak = metricEntity.peak;
+        return dto;
     }
-    if (metricEntity instanceof ParityGroupMetricEntity) {
-      dto.startTime = metricEntity.startTime.getTime();
-      dto.endTime = metricEntity.endTime.getTime();
-      dto.peak = metricEntity.peak;
-    } else {
-      dto.date = metricEntity.date;
-    }
-    dto.owner = StorageEntityTransformer.transformFromOwner(metricEntity.owner);
 
-    return dto;
-  }
-
-  private static transformMetricType(type: MetricType): string {
-    if (type !== undefined && MetricType[type]) {
-      return MetricType[type];
+    private static transformMetricType(type: MetricType): string {
+        if (type !== undefined && MetricType[type]) {
+            return MetricType[type];
+        }
+        throw new TransformationError(
+            `Metric type \'${type}\' from entity is not in enum 'MetricType'`
+        );
     }
-    throw new TransformationError(`Metric type \'${type}\' from entity is not in enum 'MetricType'`);
-  }
 }
