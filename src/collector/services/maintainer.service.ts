@@ -188,11 +188,20 @@ export class MaintainerService {
         metric = metricNameMap[metric] ?? metric;
 
         console.log(metric);
-        const lastDate: number = (
+        const dataranges: number[][] = (
             await this.httpService
                 .get(`${maintainerUrl}datasets/${metric}`)
                 .toPromise()
-        ).data.dataranges.reverse()[0][1];
+        ).data.dataranges;
+
+        if (dataranges.length === 0) {
+            return {
+                date: new Date(),
+                cols: {},
+            };
+        }
+
+        let lastDate = dataranges.reverse()[0][1];
 
         const variants =
             options?.variants ??
@@ -208,7 +217,7 @@ export class MaintainerService {
 
         console.log(variants);
 
-        const data = (
+        const data: number[][] = (
             await this.httpService
                 .post(`${maintainerUrl}bulkload_json/${metric}`, {
                     variants: variants,
