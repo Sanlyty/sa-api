@@ -20,6 +20,7 @@ export class StorageEntityMetricTransformer {
         MetricType.CHANGE_DAY,
         MetricType.CHANGE_WEEK,
         MetricType.CHANGE_MONTH,
+        -1,
     ];
 
     public static transformFlat(
