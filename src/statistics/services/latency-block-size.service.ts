@@ -33,19 +33,15 @@ export class LatencyBlockSizeService {
     private static mapEntity(data: any[], key: OperationType): OperationData {
         return {
             operation: key,
-            values: LatencyBlockSizeService.mapValues(data),
+            values: data.map(
+                (i) =>
+                    ({
+                        x: i.blockSize,
+                        y: i.latency,
+                        z: parseInt(i.count, 10),
+                    } as ThreeDimensionValue)
+            ),
         };
-    }
-
-    private static mapValues(data: any[]): ThreeDimensionValue[] {
-        return data.map(
-            (item) =>
-                ({
-                    x: item.blockSize,
-                    y: item.latency,
-                    z: parseInt(item.count, 10),
-                } as ThreeDimensionValue)
-        );
     }
 
     public async frequencyByLatencyBlockSize(
@@ -56,7 +52,7 @@ export class LatencyBlockSizeService {
 
         return filter.operations.map((operation) =>
             LatencyBlockSizeService.mapEntity(
-                groupedBy[operation] || [],
+                groupedBy[operation] ?? [],
                 operation
             )
         );

@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { LatencyEntity } from '../entities/latency.entity';
 import { isEmpty } from '@nestjs/common/utils/shared.utils';
 import { LatencyFilter } from '../../statistics/controllers/latency/latency.controller';
+import { StorageEntityRepository } from '../repositories/storage-entity.repository';
+import { MaintainerService } from './maintainer.service';
 
 export interface LatencyData {
     blockSize: number;
@@ -16,12 +18,24 @@ export interface LatencyData {
 export class LatencyMetricService {
     constructor(
         @InjectRepository(LatencyEntity)
-        private metricRepository: Repository<LatencyEntity>
+        private metricRepository: Repository<LatencyEntity>,
+        private storageRepository: StorageEntityRepository,
+        private mainteinerService: MaintainerService
     ) {}
 
     public async frequencyByLatencyBlockSize(
         filter: LatencyFilter
     ): Promise<LatencyData[]> {
+        // get systems handled by a maintainer
+        const byMaintainer = (
+            await this.storageRepository.availableSystems()
+        ).filter((s) => this.mainteinerService.handlesSystem(s.name));
+
+        // skip pools related to maintainers
+        const skippedPools = byMaintainer.flatMap((s) =>
+            s.children.map((c) => c.id)
+        );
+
         const query = this.metricRepository
             .createQueryBuilder('metric')
             .select('metric.blockSize', 'blockSize')
@@ -29,42 +43,39 @@ export class LatencyMetricService {
             .addSelect('metric.idOperation', 'operation')
             .addSelect('CAST(SUM(metric.value) as BIGINT)', 'count')
             .innerJoin('metric.owner', 'pool')
+            .where('pool.id NOT IN (:...skippedPools)', { skippedPools })
             .groupBy('metric.latency')
             .addGroupBy('metric.blockSize')
             .addGroupBy('metric.idOperation');
-        if (!isEmpty(filter.poolIds)) {
-            query.where('pool.id IN (:...ids)', { ids: filter.poolIds });
-        }
-        if (!isEmpty(filter.dates)) {
-            query.andWhere('metric.date IN (:...dates)', {
-                dates: filter.dates,
-            });
-        }
-        if (!isEmpty(filter.operations)) {
-            query.andWhere('metric.idOperation IN (:...operations)', {
-                operations: filter.operations.map((operation) => operation),
-            });
-        }
-        if (!isEmpty(filter.blockSizes)) {
-            query.andWhere('metric.blockSize IN (:...blockSizes)', {
-                blockSizes: filter.blockSizes,
-            });
-        }
-        if (!isEmpty(filter.latencies)) {
-            query.andWhere('metric.latency IN (:...latencies)', {
-                latencies: filter.latencies,
-            });
-        }
-        return query.getRawMany();
+
+        const filterFields: [string, keyof LatencyFilter][] = [
+            ['pool.id', 'poolIds'],
+            ['metric.date', 'dates'],
+            ['metric.idOperation', 'operations'],
+            ['metric.blockSize', 'blockSizes'],
+            ['metric.latency', 'latencies'],
+        ];
+
+        filterFields
+            .filter(([_, key]) => !isEmpty(filter[key]))
+            .forEach(([field, key]) =>
+                query.andWhere(`${field} IN (:...${key})`, filter)
+            );
+
+        const result = await query.getRawMany();
+
+        // handle maintainer
+
+        return result;
     }
 
-    // TODO maybe use await async in all "manager" methods when fetching
     public async availableDates(): Promise<string[]> {
         const entities = await this.metricRepository
             .createQueryBuilder('metric')
             .select('CAST(metric.date AS VARCHAR)', 'date')
             .groupBy('metric.date')
             .getRawMany();
+
         return entities.map((entity) => entity.date);
     }
 }
