@@ -107,9 +107,10 @@ export class DataCenterService {
                 return this.getPoolMetrics(types, dataCenterIds);
             case MetricGroup.ADAPTERS:
                 return this.getChannelAdapterMetrics(types, dataCenterIds);
-            case MetricGroup.HOST_GROUPS: // TODO:
+            case MetricGroup.HOST_GROUPS:
                 return this.getHostGroupMetrics(types, dataCenterIds);
-            case MetricGroup.PARITY_GROUPS: // TODO:
+            case MetricGroup.PARITY_GROUPS:
+                // TODO:
                 return this.getParityGroupsEvents(
                     types,
                     dataCenterIds,
@@ -233,14 +234,21 @@ export class DataCenterService {
                     await this.maintainerService.getMetricsForEntities(
                         system.name,
                         system.children, // Pools
-                        (e) => e.serialNumber,
-                        {
-                            skipMetric: (m) =>
-                                m.metricTypeEntity.name.startsWith(
-                                    'OUT_OF_SLA'
-                                ),
-                        }
+                        (e) => e.serialNumber
                     );
+
+                    // FIXME
+                    system.children
+                        .flatMap((c) => c.metrics)
+                        .forEach((m) => {
+                            const prefixes = ['OUT_OF_SLA_TIME', 'SLA_EVENTS'];
+
+                            for (const pref of prefixes) {
+                                if (m.metricTypeEntity.name.startsWith(pref)) {
+                                    m.metricTypeEntity.name = pref;
+                                }
+                            }
+                        });
                 }
             }
         }
