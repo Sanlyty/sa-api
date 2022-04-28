@@ -101,18 +101,21 @@ export class DataCenterService {
 
         switch (metricGroup) {
             case MetricGroup.PERFORMANCE:
-                return this.getPerformanceMetrics(types, dataCenterIds);
+                return await this.getPerformanceMetrics(types, dataCenterIds);
             case MetricGroup.CAPACITY:
             case MetricGroup.SLA:
-                return this.getPoolMetrics(types, dataCenterIds);
+                return await this.getPoolMetrics(types, dataCenterIds);
             case MetricGroup.ADAPTERS:
-                return this.getChannelAdapterMetrics(types, dataCenterIds);
-            case MetricGroup.HOST_GROUPS:
-                return this.getHostGroupMetrics(types, dataCenterIds);
-            case MetricGroup.PARITY_GROUPS:
-                // TODO:
-                return this.getParityGroupsEvents(
+                return await this.getChannelAdapterMetrics(
                     types,
+                    dataCenterIds
+                );
+            case MetricGroup.HOST_GROUPS:
+                return await this.getHostGroupMetrics(types, dataCenterIds);
+            case MetricGroup.PARITY_GROUPS:
+                return await this.getParityGroupsEvents(
+                    types,
+                    period,
                     dataCenterIds,
                     statisticParams.fromDate.toString(),
                     statisticParams.toDate.toString()
@@ -538,8 +541,9 @@ export class DataCenterService {
         return [];
     }
 
-    private getParityGroupsEvents(
+    private async getParityGroupsEvents(
         types: MetricType[],
+        period: PeriodType,
         idDataCenterParam: number[],
         fromDate: string,
         toDate: string
@@ -578,24 +582,50 @@ export class DataCenterService {
                 { metrics: types }
             )
             .leftJoinAndSelect('metrics.metricTypeEntity', 'typeEntity')
-            .where('parityGroup.idCatComponentStatus = :idStatus', {
-                idStatus: StorageEntityStatus.ACTIVE,
-            })
+            // .where('parityGroup.idCatComponentStatus = :idStatus', {
+            //     idStatus: StorageEntityStatus.ACTIVE,
+            // })
             .andWhere('system.idCatComponentStatus = :idSystemStatus', {
                 idSystemStatus: StorageEntityStatus.ACTIVE,
-            })
-            .andWhere(
-                'metrics.startTime >= :fromTime AND metrics.endTime <= :toTime',
-                {
-                    fromTime: new Date(parseInt(fromDate, 10)),
-                    toTime: new Date(parseInt(toDate, 10)),
-                }
-            );
+            });
+        // .andWhere(
+        //     '(metrics.startTime >= :fromTime AND metrics.endTime <= :toTime) OR system.name IN (:...maintained)',
+        //     {
+        //         fromTime: new Date(parseInt(fromDate, 10)),
+        //         toTime: new Date(parseInt(toDate, 10)),
+        //         maintained: this.maintainerService.getHandledSystems(),
+        //     }
+        // );
         if (idDataCenterParam.length > 0) {
             query.andWhere('datacenter.id IN (:...idDatacenter)', {
                 idDatacenter: idDataCenterParam,
             });
         }
-        return query.getMany();
+
+        const datacenters = await query.getMany();
+
+        for (const datacenter of datacenters) {
+            for (const system of datacenter.children) {
+                // Is configured via a maintainer?
+                if (this.maintainerService.handlesSystem(system.name)) {
+                    // TODO:
+                    // const data = await this.maintainerService.getLastMaintainerData(system.name, `PG_EVENTS_DURATION_${period}`)
+                    // for (const pool of system.children) {
+                    //     for (const parityGroup of pool.children) {
+                    //         parityGroup.metrics = [
+                    //             {
+                    //                 id: 'HDD_PERC',
+                    //                 date:
+                    //                 peak: 0,
+                    //                 value: 0,
+                    //             }
+                    //         ]
+                    //     }
+                    // }
+                }
+            }
+        }
+
+        return datacenters;
     }
 }

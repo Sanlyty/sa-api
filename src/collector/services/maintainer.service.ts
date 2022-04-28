@@ -70,6 +70,39 @@ export class MaintainerService {
         return id in this.maintainerMap;
     }
 
+    public getHandledSystems(): string[] {
+        return Object.keys(this.maintainerMap);
+    }
+
+    public async getLatencyAnalysisDates(systemId: string): Promise<string[]> {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        return (
+            await this.httpService
+                .post(`${maintainerUrl}features/latency_analysis_dates`)
+                .toPromise()
+        ).data;
+    }
+
+    public async getLatencyAnalysis(
+        systemId: string,
+        poolName: string,
+        op: 'READ' | 'WRITE',
+        dates: string[]
+    ): Promise<[number, number, number][]> {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        return (
+            await this.httpService
+                .post(`${maintainerUrl}features/latency_analysis`, {
+                    op,
+                    dates,
+                    pool: poolName,
+                })
+                .toPromise()
+        ).data;
+    }
+
     public async getMetricsForEntities(
         systemId: string,
         entities: StorageEntityEntity[],
@@ -134,9 +167,10 @@ export class MaintainerService {
 
         entities.forEach((e) => {
             // Retain skipped metrics
-            e.metrics = e.metrics.filter(
-                (m) => options?.skipMetric && options.skipMetric(m)
-            );
+            e.metrics =
+                e.metrics?.filter(
+                    (m) => options?.skipMetric && options.skipMetric(m)
+                ) ?? [];
 
             //  Fill in obtained metrics
             e.metrics.push(

@@ -17,7 +17,6 @@ import { StorageEntityMetricTransformer } from '../transformers/storage-entity-m
 import { StorageEntityFilterVo } from '../services/vos/storage-entity-filter.vo';
 import { MetricFilterUtils } from '../utils/metric-filter.utils';
 import { OrderByUtils } from '../utils/vo/order-by.utils';
-import { StatisticParams } from './params/statistic.params';
 
 const metricGroups = {
     performance: MetricGroup.PERFORMANCE,

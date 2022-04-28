@@ -14,6 +14,10 @@ export interface LatencyData {
     operation: number;
 }
 
+function isEmptyOrContains<T>(data: T[], item: T) {
+    return isEmpty(data) || data.indexOf(item) >= 0;
+}
+
 @Injectable()
 export class LatencyMetricService {
     constructor(
@@ -62,11 +66,75 @@ export class LatencyMetricService {
                 query.andWhere(`${field} IN (:...${key})`, filter)
             );
 
-        const result = await query.getRawMany();
+        type ResultKey = string;
+        const result = new Map<ResultKey, number>();
+
+        for (const {
+            operation,
+            latency,
+            blockSize,
+            count,
+        } of await query.getRawMany()) {
+            const idx = `${operation};${latency};${blockSize}`;
+
+            let prev = result.has(idx) ? result.get(idx) : 0;
+            result.set(idx, prev + Number.parseInt(count));
+        }
 
         // handle maintainer
+        for (const system of byMaintainer) {
+            for (const pool of system.children) {
+                if (!isEmptyOrContains(filter.poolIds, pool.id)) continue;
 
-        return result;
+                for (const [opId, op] of [
+                    [1, 'READ'],
+                    [2, 'WRITE'],
+                ] as const) {
+                    if (!isEmptyOrContains(filter.operations, opId)) continue;
+
+                    const maintData = await this.mainteinerService.getLatencyAnalysis(
+                        system.name,
+                        pool.name,
+                        op,
+                        filter.dates as any
+                    );
+
+                    maintData.forEach((row) => {
+                        const latency = Math.pow(2, row[0]);
+                        const blockSize = Math.pow(2, row[1]);
+                        const value = row[2];
+
+                        if (!isEmptyOrContains(filter.latencies, latency))
+                            return;
+                        if (!isEmptyOrContains(filter.blockSizes, blockSize))
+                            return;
+
+                        const idx = `${opId};${latency};${blockSize}`;
+                        let prev = result.has(idx) ? result.get(idx) : 0;
+                        result.set(idx, prev + value);
+                    });
+                }
+            }
+        }
+
+        const transformed = [];
+
+        for (const [key, val] of result) {
+            const operation = Number.parseInt(key.split(';')[0]);
+            const [latency, blockSize] = key
+                .split(';')
+                .slice(1)
+                .map((v) => Number.parseFloat(v));
+
+            transformed.push({
+                operation,
+                latency,
+                blockSize,
+                count: val.toString(),
+            });
+        }
+
+        return transformed;
     }
 
     public async availableDates(): Promise<string[]> {
@@ -76,6 +144,23 @@ export class LatencyMetricService {
             .groupBy('metric.date')
             .getRawMany();
 
-        return entities.map((entity) => entity.date);
+        const dates = new Set(entities.map((entity) => entity.date));
+
+        // get systems handled by a maintainer
+        const byMaintainer = (
+            await this.storageRepository.availableSystems()
+        ).filter((s) => this.mainteinerService.handlesSystem(s.name));
+
+        await Promise.all(
+            byMaintainer.map(async (m) => {
+                const newDates = await this.mainteinerService.getLatencyAnalysisDates(
+                    m.name
+                );
+
+                newDates.forEach((d) => dates.add(d));
+            })
+        );
+
+        return [...dates];
     }
 }
