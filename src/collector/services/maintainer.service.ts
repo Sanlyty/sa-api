@@ -103,6 +103,31 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getPGEvents(
+        systemId: string,
+        from?: number,
+        to?: number
+    ): Promise<
+        {
+            from: number;
+            to: number;
+            average: number;
+            peak: number;
+            key: string;
+        }[]
+    > {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        return (
+            await this.httpService
+                .post(`${maintainerUrl}features/pg_events`, {
+                    from,
+                    to,
+                })
+                .toPromise()
+        ).data;
+    }
+
     public async getMetricsForEntities(
         systemId: string,
         entities: StorageEntityEntity[],
@@ -145,7 +170,7 @@ export class MaintainerService {
                         const metricName = m.metricTypeEntity.name;
 
                         // ? Why not check for key in 'metricData'
-                        // ! The assignment is after an await point -> redundant calls
+                        // A The assignment is after an await point -> redundant calls
                         if (!known.has(metricName)) {
                             known.add(metricName);
                             metricData[metricName] = {

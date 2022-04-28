@@ -117,8 +117,8 @@ export class DataCenterService {
                     types,
                     period,
                     dataCenterIds,
-                    statisticParams.fromDate.toString(),
-                    statisticParams.toDate.toString()
+                    statisticParams.fromDate,
+                    statisticParams.toDate
                 );
 
             default:
@@ -545,8 +545,8 @@ export class DataCenterService {
         types: MetricType[],
         period: PeriodType,
         idDataCenterParam: number[],
-        fromDate: string,
-        toDate: string
+        fromDate: number,
+        toDate: number
     ) {
         const query = this.entityRepo
             .createQueryBuilder('datacenter')
@@ -582,20 +582,20 @@ export class DataCenterService {
                 { metrics: types }
             )
             .leftJoinAndSelect('metrics.metricTypeEntity', 'typeEntity')
-            // .where('parityGroup.idCatComponentStatus = :idStatus', {
-            //     idStatus: StorageEntityStatus.ACTIVE,
-            // })
+            .where('parityGroup.idCatComponentStatus = :idStatus', {
+                idStatus: StorageEntityStatus.ACTIVE,
+            })
             .andWhere('system.idCatComponentStatus = :idSystemStatus', {
                 idSystemStatus: StorageEntityStatus.ACTIVE,
-            });
-        // .andWhere(
-        //     '(metrics.startTime >= :fromTime AND metrics.endTime <= :toTime) OR system.name IN (:...maintained)',
-        //     {
-        //         fromTime: new Date(parseInt(fromDate, 10)),
-        //         toTime: new Date(parseInt(toDate, 10)),
-        //         maintained: this.maintainerService.getHandledSystems(),
-        //     }
-        // );
+            })
+            .andWhere(
+                '(metrics.startTime >= :fromTime AND metrics.endTime <= :toTime) OR system.name IN (:...maintained)',
+                {
+                    fromTime: new Date(fromDate),
+                    toTime: new Date(toDate),
+                    maintained: this.maintainerService.getHandledSystems(),
+                }
+            );
         if (idDataCenterParam.length > 0) {
             query.andWhere('datacenter.id IN (:...idDatacenter)', {
                 idDatacenter: idDataCenterParam,
@@ -608,20 +608,32 @@ export class DataCenterService {
             for (const system of datacenter.children) {
                 // Is configured via a maintainer?
                 if (this.maintainerService.handlesSystem(system.name)) {
-                    // TODO:
-                    // const data = await this.maintainerService.getLastMaintainerData(system.name, `PG_EVENTS_DURATION_${period}`)
-                    // for (const pool of system.children) {
-                    //     for (const parityGroup of pool.children) {
-                    //         parityGroup.metrics = [
-                    //             {
-                    //                 id: 'HDD_PERC',
-                    //                 date:
-                    //                 peak: 0,
-                    //                 value: 0,
-                    //             }
-                    //         ]
-                    //     }
-                    // }
+                    const data = await this.maintainerService.getPGEvents(
+                        system.name,
+                        fromDate,
+                        toDate
+                    );
+
+                    for (const pool of system.children) {
+                        console.log(pool.children.map((c) => c.name));
+                        for (const parityGroup of pool.children) {
+                            parityGroup.metrics = data
+                                .filter(({ key }) => key === parityGroup.name)
+                                .map((row) => ({
+                                    id: -1,
+                                    value: row.average,
+                                    peak: row.peak,
+                                    date: new Date((row.from + row.to) / 2),
+                                    metricTypeEntity: {
+                                        id: -1,
+                                        unit: '%',
+                                        idCatMetricGroup: MetricType.HDD_PERC,
+                                        name: 'HDD_PERC',
+                                        threshold: undefined as any,
+                                    },
+                                }));
+                        }
+                    }
                 }
             }
         }
