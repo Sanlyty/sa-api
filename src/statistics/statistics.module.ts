@@ -13,6 +13,8 @@ import { DatabaseAdminitrationService } from './services/database-adminitration.
 import { AdminController } from './controllers/admin.controller';
 import { NotificationService } from './workers/notification-service';
 import { ConfigModule } from '../config/config.module';
+import { StorageEntityRepository } from '../collector/repositories/storage-entity.repository';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
     controllers: [
@@ -31,6 +33,10 @@ import { ConfigModule } from '../config/config.module';
         NotificationService,
         DatabaseAdminitrationService,
     ],
-    imports: [CollectorModule, ConfigModule],
+    imports: [
+        CollectorModule,
+        ConfigModule,
+        TypeOrmModule.forFeature([StorageEntityRepository]),
+    ],
 })
 export class StatisticsModule {}

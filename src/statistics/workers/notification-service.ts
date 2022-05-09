@@ -1,10 +1,14 @@
 import { Cron } from '@nestjs/schedule';
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '../../config/config.service';
-import { createTransport, Transporter } from 'nodemailer';
-import { MaintainerService } from '../../collector/services/maintainer.service';
 import { readFileSync, writeFile, existsSync } from 'fs';
+import { createTransport, Transporter } from 'nodemailer';
+import { ConfigService } from '../../config/config.service';
+import { MaintainerService } from '../../collector/services/maintainer.service';
+import { StorageEntityRepository } from '../../collector/repositories/storage-entity.repository';
+import { StorageEntityType } from '../../collector/dto/owner.dto';
+import { StorageEntityStatus } from '../../collector/enums/storage-entity-status.enum';
 
+// TODO: choose a better persistance method
 @Injectable()
 export class NotificationService {
     private mailer: Transporter;
@@ -12,7 +16,8 @@ export class NotificationService {
 
     constructor(
         private config: ConfigService,
-        private maintainerService: MaintainerService
+        private maintainerService: MaintainerService,
+        private entityRepo: StorageEntityRepository
     ) {
         this.mailer = createTransport({
             ...config.getSmtpSettings(),
@@ -22,7 +27,44 @@ export class NotificationService {
             this.lastChecked = Number(readFileSync('last_notify'));
     }
 
-    @Cron('*/15 * * * * *')
+    private getPoolMap = async (): Promise<Record<string, string>> => {
+        const systems = (
+            await this.entityRepo
+                .querySystems()
+                .innerJoinAndSelect(
+                    'system.children',
+                    'pool',
+                    'pool.idType = :poolType',
+                    { poolType: StorageEntityType.POOL }
+                )
+                .leftJoinAndSelect(
+                    'pool.children',
+                    'parityGroup',
+                    'parityGroup.idType=:parityGroupType',
+                    { parityGroupType: StorageEntityType.PARITY_GROUP }
+                )
+                .where('parityGroup.idCatComponentStatus = :idStatus', {
+                    idStatus: StorageEntityStatus.ACTIVE,
+                })
+                .getMany()
+        ).flatMap((d) => d.children);
+
+        const poolMap = {};
+
+        for (const system of systems) {
+            for (const pool of system.children) {
+                for (const parityGroup of pool.children) {
+                    const id = `${system.name}:${parityGroup.name}`;
+
+                    poolMap[id] = pool.name;
+                }
+            }
+        }
+
+        return poolMap;
+    };
+
+    @Cron('0 0 */2 * * *')
     public async parityGroupAlert() {
         const reported: {
             system: string;
@@ -33,6 +75,7 @@ export class NotificationService {
             when: Date;
         }[] = [];
 
+        const poolMap = await this.getPoolMap();
         const now = new Date().getTime();
 
         for (const system of this.maintainerService.getHandledSystems()) {
@@ -49,8 +92,7 @@ export class NotificationService {
                     when: new Date((e.to + e.from) / 2),
                     perc: e.average,
                     pg: `PG ${e.key}`,
-                    // TODO: get this from the database?
-                    pool: '?',
+                    pool: poolMap[`${system}:${e.key}`] ?? '?',
                 });
             });
         }

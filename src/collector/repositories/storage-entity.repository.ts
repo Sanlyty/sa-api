@@ -5,6 +5,7 @@ import { StorageEntityType } from '../dto/owner.dto';
 import { isEmpty } from '@nestjs/common/utils/shared.utils';
 import { StorageEntityNotFoundError } from '../services/errors/storage-entity-not-found.error';
 import { KeyPart, StorageEntityKey } from '../utils/storage-entity-key.utils';
+import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.entity';
 
 @EntityRepository(StorageEntityEntity)
 export class StorageEntityRepository extends TreeRepository<
@@ -289,4 +290,34 @@ export class StorageEntityRepository extends TreeRepository<
             });
         }
     }
+
+    public querySystems = (datacenters?: number[]) => {
+        const query = this.createQueryBuilder('datacenter')
+            .leftJoinAndSelect(
+                'datacenter.children',
+                'system',
+                'system.parent = datacenter.id AND system.idType=:systemType',
+                { systemType: StorageEntityType.SYSTEM }
+            )
+            .leftJoinAndMapOne(
+                'system.detail',
+                StorageEntityDetailsEntity,
+                'detail',
+                'detail.id = system.id'
+            )
+            .where('system.idCatComponentStatus = :idSystemStatus', {
+                idSystemStatus: StorageEntityStatus.ACTIVE,
+            })
+            .andWhere('datacenter.idType = :dataCenterType', {
+                dataCenterType: StorageEntityType.DATACENTER,
+            });
+
+        if (datacenters && datacenters.length > 0) {
+            query.andWhere('datacenter.id IN (:...idDatacenter)', {
+                idDatacenter: datacenters,
+            });
+        }
+
+        return query;
+    };
 }

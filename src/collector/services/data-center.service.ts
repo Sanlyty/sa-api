@@ -98,36 +98,8 @@ export class DataCenterService {
         return this.getEmptyDatacenter(idDataCenter);
     }
 
-    querySystems = (datacenters?: number[]) => {
-        const query = this.entityRepo
-            .createQueryBuilder('datacenter')
-            .leftJoinAndSelect(
-                'datacenter.children',
-                'system',
-                'system.parent = datacenter.id AND system.idType=:systemType',
-                { systemType: StorageEntityType.SYSTEM }
-            )
-            .leftJoinAndMapOne(
-                'system.detail',
-                StorageEntityDetailsEntity,
-                'detail',
-                'detail.id = system.id'
-            )
-            .where('system.idCatComponentStatus = :idSystemStatus', {
-                idSystemStatus: StorageEntityStatus.ACTIVE,
-            })
-            .andWhere('datacenter.idType = :dataCenterType', {
-                dataCenterType: StorageEntityType.DATACENTER,
-            });
-
-        if (datacenters && datacenters.length > 0) {
-            query.andWhere('datacenter.id IN (:...idDatacenter)', {
-                idDatacenter: datacenters,
-            });
-        }
-
-        return query;
-    };
+    querySystems = (datacenters?: number[]) =>
+        this.entityRepo.querySystems(datacenters);
 
     async getPerformanceMetrics(
         metricTypes: MetricType[],
