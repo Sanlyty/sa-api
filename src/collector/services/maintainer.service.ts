@@ -136,6 +136,7 @@ export class MaintainerService {
             additionalKeys?: Record<string, MetricColSelector>;
             metrics?: {
                 id: string;
+                target?: string;
                 unit: string;
             }[];
             metricNameTransform?: (m: string) => string;
@@ -144,15 +145,16 @@ export class MaintainerService {
     ) {
         let metricData: Record<
             string,
-            { data: LastMaintainerData; unit: string }
+            { data: LastMaintainerData; target?: string; unit: string }
         > = {};
 
         if (options?.metrics) {
             // Preset metrics
 
             for (const metric of options.metrics) {
-                metric[metric.id] = {
+                metricData[metric.id] = {
                     data: await this.getLastMaintainerData(systemId, metric.id),
+                    target: metric.target,
                     unit: metric.unit,
                 };
             }
@@ -206,7 +208,7 @@ export class MaintainerService {
                         id: -1,
                         metricTypeEntity: {
                             id: -1,
-                            name: metricId,
+                            name: mData.target ?? metricId,
                             unit: mData.unit,
                             threshold: undefined as any,
                             idCatMetricGroup: undefined as any,

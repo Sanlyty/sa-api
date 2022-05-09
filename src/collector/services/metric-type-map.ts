@@ -117,4 +117,76 @@ const metricTypeMap: MetricTypeMap = {
     },
 };
 
+type MaintainerMetricMap = Record<
+    Exclude<MetricGroup, MetricGroup.ADAPTERS> | 'ADAPTER_PORT' | 'ADAPTER',
+    { id: string; target?: string; unit: string }[]
+>;
+export const maintainerMetricMap: MaintainerMetricMap = {
+    [MetricGroup.PERFORMANCE]: [
+        { id: 'WORKLOAD', unit: 'IOPS' },
+        { id: 'TRANSFER', unit: 'MBps' },
+        { id: 'RESPONSE', unit: 'ms' },
+        // { id: 'RESPONSE_READ', unit: 'ms' },
+        // { id: 'RESPONSE_WRITE', unit: 'ms' },
+        { id: 'CPU_PERC', unit: '%' },
+        { id: 'HDD_PERC', unit: '%' },
+        { id: 'WRITE_PENDING_PERC', unit: '%' },
+    ],
+    [MetricGroup.CAPACITY]: [
+        { id: 'PHYSICAL_CAPACITY', unit: 'TB' },
+        { id: 'PHYSICAL_SUBS_PERC', unit: '%' },
+        { id: 'AVAILABLE_CAPACITY', unit: 'TB' },
+        { id: 'LOGICAL_USED_PERC', unit: '%' },
+        { id: 'PHYSICAL_USED_PERC', unit: '%' },
+        { id: 'COMPRESSION_RATIO', unit: '' },
+        { id: 'CHANGE_DAY', unit: 'GB' },
+        { id: 'CHANGE_MONTH', unit: 'GB' },
+        { id: 'CHANGE_WEEK', unit: 'GB' },
+        { id: 'PREDICTION_L1', unit: 'days' },
+        { id: 'PREDICTION_L2', unit: 'days' },
+        { id: 'PREDICTION_L3', unit: 'days' },
+        { id: 'CHANGE_DAY', unit: 'TB' },
+        { id: 'CHANGE_WEEK', unit: 'TB' },
+        { id: 'CHANGE_MONTH', unit: 'TB' },
+        { id: 'PHYSICAL_USED', unit: 'TB' },
+        { id: 'PHYSICAL_FREE', unit: 'TB' },
+        { id: 'LOGICAL_CAPACITY', unit: 'TB' },
+        { id: 'LOGICAL_USED', unit: 'TB' },
+        { id: 'LOGICAL_FREE', unit: 'TB' },
+        { id: 'NET_TOTAL', unit: 'TB' },
+        { id: 'NET_USED', unit: 'TB' },
+        { id: 'NET_FREE', unit: 'TB' },
+        { id: 'PHY_USED_BEF_SAVING', unit: 'GB' },
+        { id: 'DEDUP_RATIO', unit: '' },
+        { id: 'TOTAL_SAVING_EFFECT', unit: '' },
+        { id: 'SUBSCRIBED_CAPACITY', unit: 'TB' },
+        { id: 'LOGICAL_SUBS_PERC', unit: '%' },
+        { id: 'NET_SUBS_PERC', unit: '%' },
+        { id: 'NET_USED_PERC', unit: '%' },
+    ],
+    [MetricGroup.SLA]: [
+        { id: 'SLA_EVENTS', unit: '' },
+        { id: 'OUT_OF_SLA_TIME', unit: 's' },
+    ],
+    ADAPTER: [
+        { id: 'IMBALANCE_EVENTS', unit: '' },
+        { id: 'IMBALANCE_ABSOLUT', unit: 'MBps' },
+        { id: 'IMBALANCE_PERC', unit: '%' },
+    ],
+    ADAPTER_PORT: [
+        { id: 'PORT_IMBALANCE_EVENTS', unit: '' },
+        { id: 'PORT_IMBALANCE_ABSOLUT', unit: 'MBps' },
+        { id: 'PORT_IMBALANCE_PERC', unit: '%' },
+    ],
+    [MetricGroup.HOST_GROUPS]: [
+        { id: 'NET_TOTAL', unit: 'TB' },
+        { id: 'NET_USED', unit: 'TB' },
+        { id: 'NET_USED_PERC', unit: '%' },
+        { id: 'CHANGE_DAY', unit: 'GB' },
+        { id: 'CHANGE_WEEK', unit: 'GB' },
+        { id: 'CHANGE_MONTH', unit: 'GB' },
+    ],
+    [MetricGroup.PARITY_GROUPS]: [{ id: 'HDD_PERC', unit: '%' }],
+};
+
 export default metricTypeMap;
