@@ -11,6 +11,8 @@ import { LatencyBlockSizeService } from './services/latency-block-size.service';
 import { MaterializedViewRefresher } from './workers/materialized-view-refresher';
 import { DatabaseAdminitrationService } from './services/database-adminitration.service';
 import { AdminController } from './controllers/admin.controller';
+import { NotificationService } from './workers/notification-service';
+import { ConfigModule } from '../config/config.module';
 
 @Module({
     controllers: [
@@ -26,8 +28,9 @@ import { AdminController } from './controllers/admin.controller';
         SystemAggregatedMetricService,
         LatencyBlockSizeService,
         MaterializedViewRefresher,
+        NotificationService,
         DatabaseAdminitrationService,
     ],
-    imports: [CollectorModule],
+    imports: [CollectorModule, ConfigModule],
 })
 export class StatisticsModule {}

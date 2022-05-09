@@ -28,4 +28,24 @@ export class ConfigService {
             migrations: [this.envConfig.db_migrations ?? 'dist/migration/*.js'],
         };
     }
+
+    getSmtpSettings() {
+        const cfg = this.envConfig;
+        const [host, port] = cfg.smtp_host.split(':');
+        const [user, pass] = cfg.smtp_auth.split(':');
+
+        return {
+            host,
+            port: port ? Number(port) : undefined,
+            auth: { user, pass },
+        };
+    }
+
+    getSmtpFrom(): string {
+        return this.envConfig.smtp_from;
+    }
+
+    getSmtpTo(): string[] {
+        return this.envConfig.smtp_to?.split(',');
+    }
 }

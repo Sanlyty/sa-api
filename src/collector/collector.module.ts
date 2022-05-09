@@ -106,6 +106,7 @@ import { MaintainerService } from './services/maintainer.service';
         MetricTypeService,
         LatencyMetricService,
         StorageEntityService,
+        MaintainerService,
     ],
 })
 export class CollectorModule {}
