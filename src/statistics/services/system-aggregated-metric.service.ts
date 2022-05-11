@@ -1,5 +1,8 @@
 import { AggregatedMetricService } from './aggregated-metric.service';
-import { DataCenterService } from '../../collector/services/data-center.service';
+import {
+    DataCenterService,
+    MetricGroup,
+} from '../../collector/services/data-center.service';
 import { MetricTypeService } from '../../collector/services/metric-type.service';
 import { MetricType } from '../../collector/enums/metric-type.enum';
 import { Injectable } from '@nestjs/common';
@@ -18,7 +21,12 @@ export class SystemAggregatedMetricService extends AggregatedMetricService {
         types: MetricType[],
         dataCenterIds: number[]
     ): Promise<StorageEntityEntity[]> {
-        return this.dcService.getPerformanceMetrics(types, dataCenterIds);
+        return this.dcService.getPerformanceMetrics(
+            types,
+            dataCenterIds,
+            MetricGroup.PERFORMANCE,
+            'DAY'
+        );
     }
 
     fetchMetricsOnly(entities: StorageEntityEntity[]): any[] {

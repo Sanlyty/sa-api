@@ -77,8 +77,8 @@ export class LatencyMetricService {
         } of await query.getRawMany()) {
             const idx = `${operation};${latency};${blockSize}`;
 
-            let prev = result.has(idx) ? result.get(idx) : 0;
-            result.set(idx, prev + Number.parseInt(count));
+            const prev = result.has(idx) ? result.get(idx) : 0;
+            result.set(idx, prev + Number.parseInt(count, 10));
         }
 
         // handle maintainer
@@ -110,7 +110,7 @@ export class LatencyMetricService {
                             return;
 
                         const idx = `${opId};${latency};${blockSize}`;
-                        let prev = result.has(idx) ? result.get(idx) : 0;
+                        const prev = result.has(idx) ? result.get(idx) : 0;
                         result.set(idx, prev + value);
                     });
                 }
@@ -120,7 +120,7 @@ export class LatencyMetricService {
         const transformed = [];
 
         for (const [key, val] of result) {
-            const operation = Number.parseInt(key.split(';')[0]);
+            const operation = Number.parseInt(key.split(';')[0], 10);
             const [latency, blockSize] = key
                 .split(';')
                 .slice(1)

@@ -18,7 +18,7 @@ export class ConfigService {
 
         return {
             host: cfg.db_host,
-            port: parseInt(cfg.db_port),
+            port: parseInt(cfg.db_port, 10),
             username: cfg.db_username,
             password: cfg.db_password,
             database: cfg.db_database,

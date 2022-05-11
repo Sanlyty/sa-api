@@ -20,7 +20,7 @@ export interface ThreeDimensionValue {
 
 export interface LatencyMetadata {
     dates: string[]; // Instead of date string is used because locale didn't set correctly
-    systems: Array<Partial<SystemPool>>;
+    systems: Partial<SystemPool>[];
 }
 
 @Injectable()

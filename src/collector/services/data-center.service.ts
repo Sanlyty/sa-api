@@ -271,7 +271,7 @@ export class DataCenterService {
                         system.children, // AdapterGroups
                         (e) => e.name,
                         {
-                            metrics: maintainerMetricMap['ADAPTER'],
+                            metrics: maintainerMetricMap.ADAPTER,
                         }
                     );
 
@@ -280,7 +280,7 @@ export class DataCenterService {
                         system.children.flatMap((c) => c.children), // PortGroups
                         (e) => longPortGroupName(e.name),
                         {
-                            metrics: maintainerMetricMap['ADAPTER_PORT'],
+                            metrics: maintainerMetricMap.ADAPTER_PORT,
                         }
                     );
                 }
@@ -343,7 +343,7 @@ export class DataCenterService {
         metricGroup: MetricGroup,
         period?: PeriodType
     ): MetricType[] {
-        let mapEntry = metricTypeMap[metricGroup][period ?? 'DAY'];
+        const mapEntry = metricTypeMap[metricGroup][period ?? 'DAY'];
 
         if (!mapEntry?.length) {
             throw new BadRequestException(

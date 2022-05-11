@@ -143,7 +143,7 @@ export class MaintainerService {
             skipMetric?: (m: MetricEntityInterface) => boolean;
         }
     ) {
-        let metricData: Record<
+        const metricData: Record<
             string,
             { data: LastMaintainerData; target?: string; unit: string }
         > = {};
@@ -161,7 +161,7 @@ export class MaintainerService {
         } else {
             // Autodetect metrics
 
-            let known: Set<string> = new Set();
+            const known: Set<string> = new Set();
             await Promise.all(
                 entities.flatMap((e) =>
                     e.metrics.map(async (m) => {
@@ -246,7 +246,7 @@ export class MaintainerService {
         const maintainerUrl = this.maintainerMap[id];
         metric = metricNameMap[metric] ?? metric;
 
-        console.log(metric);
+        // console.log(metric);
         const dataranges: number[][] = (
             await this.httpService
                 .get(`${maintainerUrl}datasets/${metric}`)
@@ -260,7 +260,7 @@ export class MaintainerService {
             };
         }
 
-        let lastDate = dataranges.reverse()[0][1];
+        const lastDate = dataranges.reverse()[0][1];
 
         const variants =
             options?.variants ??
@@ -274,12 +274,12 @@ export class MaintainerService {
                     .toPromise()
             ).data;
 
-        console.log(variants);
+        // console.log(variants);
 
         const data: number[][] = (
             await this.httpService
                 .post(`${maintainerUrl}bulkload_json/${metric}`, {
-                    variants: variants,
+                    variants,
                     from: (lastDate - 1).toString(),
                     to: lastDate.toString(),
                 })
