@@ -7,28 +7,30 @@ import { CatMetricTypeEntity } from './cat-metric-type.entity';
 // TODO Make a view_metric_active for all "Read" Entity
 @Entity('view_system_metrics')
 export class SystemMetricReadEntity implements MetricEntityInterface {
-  @PrimaryColumn()
-  id: number;
+    @PrimaryColumn()
+    id: number;
 
-  @Column({ name: 'value' })
-  value: number;
+    @Column({ name: 'value' })
+    value: number;
 
-  @Column({ name: 'peak' })
-  peak: number;
+    @Column({ name: 'peak' })
+    peak: number;
 
-  @ManyToOne(() => StorageEntityEntity, storageEntity => storageEntity.id, { eager: true })
-  @JoinColumn({ name: 'id_storage_entity' })
-  owner: StorageEntityEntity;
+    @ManyToOne(() => StorageEntityEntity, (storageEntity) => storageEntity.id, {
+        eager: true,
+    })
+    @JoinColumn({ name: 'id_storage_entity' })
+    owner: StorageEntityEntity;
 
-  @Column('date', { name: 'date' })
-  date: Date;
+    @Column('date', { name: 'date' })
+    date: Date;
 
-  @Column({ name: 'id_cat_metric_type', type: 'integer' })
-  idType: number;
+    @Column({ name: 'id_cat_metric_type', type: 'integer' })
+    idType: number;
 
-  metrics: any[];
+    metrics: unknown[];
 
-  @ManyToOne(() => CatMetricTypeEntity, { eager: true })
-  @JoinColumn({ name: 'id_cat_metric_type' })
-  metricTypeEntity: CatMetricTypeEntity;
+    @ManyToOne(() => CatMetricTypeEntity, { eager: true })
+    @JoinColumn({ name: 'id_cat_metric_type' })
+    metricTypeEntity: CatMetricTypeEntity;
 }

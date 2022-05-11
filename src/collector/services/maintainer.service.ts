@@ -80,8 +80,11 @@ export class MaintainerService {
         const maintainerUrl = this.maintainerMap[systemId];
 
         return (
-            await lastValueFrom(this.httpService
-                .post(`${maintainerUrl}features/latency_analysis_dates`))
+            await lastValueFrom(
+                this.httpService.post(
+                    `${maintainerUrl}features/latency_analysis_dates`
+                )
+            )
         ).data;
     }
 
@@ -94,12 +97,16 @@ export class MaintainerService {
         const maintainerUrl = this.maintainerMap[systemId];
 
         return (
-            await lastValueFrom(this.httpService
-                .post(`${maintainerUrl}features/latency_analysis`, {
-                    op,
-                    dates,
-                    pool: poolName,
-                }))
+            await lastValueFrom(
+                this.httpService.post(
+                    `${maintainerUrl}features/latency_analysis`,
+                    {
+                        op,
+                        dates,
+                        pool: poolName,
+                    }
+                )
+            )
         ).data;
     }
 
@@ -119,8 +126,8 @@ export class MaintainerService {
         const maintainerUrl = this.maintainerMap[systemId];
 
         return (
-            await lastValueFrom(this.httpService
-                .post(`${maintainerUrl}features/pg_events`, {
+            await lastValueFrom(
+                this.httpService.post(`${maintainerUrl}features/pg_events`, {
                     from,
                     to,
                 })
@@ -210,8 +217,8 @@ export class MaintainerService {
                             id: -1,
                             name: mData.target ?? metricId,
                             unit: mData.unit,
-                            threshold: undefined as any,
-                            idCatMetricGroup: undefined as any,
+                            threshold: undefined,
+                            idCatMetricGroup: undefined,
                         },
                         date: mData.data.date,
                         value:
@@ -248,8 +255,8 @@ export class MaintainerService {
 
         // console.log(metric);
         const dataranges: number[][] = (
-            await lastValueFrom(this.httpService
-                .get(`${maintainerUrl}datasets/${metric}`)
+            await lastValueFrom(
+                this.httpService.get(`${maintainerUrl}datasets/${metric}`)
             )
         ).data.dataranges;
 
@@ -265,24 +272,30 @@ export class MaintainerService {
         const variants =
             options?.variants ??
             (
-                await lastValueFrom(this.httpService
-                    .post(`${maintainerUrl}features/variant_recommend`, {
-                        id: metric,
-                        from: (lastDate - 1).toString(),
-                        to: lastDate.toString(),
-                    })
+                await lastValueFrom(
+                    this.httpService.post(
+                        `${maintainerUrl}features/variant_recommend`,
+                        {
+                            id: metric,
+                            from: (lastDate - 1).toString(),
+                            to: lastDate.toString(),
+                        }
+                    )
                 )
             ).data;
 
         // console.log(variants);
 
         const data: number[][] = (
-            await lastValueFrom(this.httpService
-                .post(`${maintainerUrl}bulkload_json/${metric}`, {
-                    variants,
-                    from: (lastDate - 1).toString(),
-                    to: lastDate.toString(),
-                })
+            await lastValueFrom(
+                this.httpService.post(
+                    `${maintainerUrl}bulkload_json/${metric}`,
+                    {
+                        variants,
+                        from: (lastDate - 1).toString(),
+                        to: lastDate.toString(),
+                    }
+                )
             )
         ).data;
 

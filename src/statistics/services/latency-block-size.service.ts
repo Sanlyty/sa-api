@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { LatencyMetricService } from '../../collector/services/latency-metric.service';
+import {
+    LatencyData,
+    LatencyMetricService,
+} from '../../collector/services/latency-metric.service';
 import { OperationType } from '../../collector/enums/operation-type.enum';
 import { ArrayUtils } from '../utils/array.utils';
 import { SystemPool } from '../models/SystemPool';
@@ -30,7 +33,10 @@ export class LatencyBlockSizeService {
         private readonly storageEntityService: StorageEntityService
     ) {}
 
-    private static mapEntity(data: any[], key: OperationType): OperationData {
+    private static mapEntity(
+        data: LatencyData[],
+        key: OperationType
+    ): OperationData {
         return {
             operation: key,
             values: data.map(
@@ -38,7 +44,7 @@ export class LatencyBlockSizeService {
                     ({
                         x: i.blockSize,
                         y: i.latency,
-                        z: parseInt(i.count, 10),
+                        z: parseInt(i.count.toString(), 10),
                     } as ThreeDimensionValue)
             ),
         };

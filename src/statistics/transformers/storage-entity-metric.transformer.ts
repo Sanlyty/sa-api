@@ -7,10 +7,8 @@ import {
     StorageMetricEntityHierarchyDto,
 } from '../models/dtos/storage-metric-entity-hierarchy.dto';
 import { StorageEntityType } from '../../collector/dto/owner.dto';
-import { isEmpty } from '@nestjs/common/utils/shared.utils';
 import { StorageEntityStatus } from '../../collector/enums/storage-entity-status.enum';
 import { MetricEntityInterface } from '../../collector/entities/metric-entity.interface';
-import { SystemMetricReadEntity } from '../../collector/entities/system-metric-read.entity';
 import { StorageEntityTransformer } from '../../collector/transformers/storage-entity.transformer';
 import { StorageMetricEntityFlatDto } from '../models/dtos/storage-metric-entity-flat.dto';
 import { ParityGroupMetricEntity } from '../../collector/entities/parity-group-metric.entity';
@@ -74,7 +72,7 @@ export class StorageEntityMetricTransformer {
         dto.status = StorageEntityStatus[storageEntity.idCatComponentStatus];
         dto.referenceId = storageEntity.serialNumber;
 
-        if (Boolean(storageEntity.detail)) {
+        if (storageEntity.detail) {
             dto.detail = StorageEntityTransformer.transformDetail(
                 storageEntity.detail
             );

@@ -5,25 +5,27 @@ import { CatMetricTypeEntity } from './cat-metric-type.entity';
 
 @Entity('view_port_metrics')
 export class PortMetricReadEntity implements MetricEntityInterface {
-  @PrimaryColumn()
-  id: number;
+    @PrimaryColumn()
+    id: number;
 
-  @Column({ name: 'value' })
-  value: number;
+    @Column({ name: 'value' })
+    value: number;
 
-  @Column('date', { name: 'date' })
-  date: Date;
+    @Column('date', { name: 'date' })
+    date: Date;
 
-  @Column({ name: 'id_cat_metric_type', type: 'integer' })
-  idType: number;
+    @Column({ name: 'id_cat_metric_type', type: 'integer' })
+    idType: number;
 
-  @ManyToOne(() => StorageEntityEntity, storageEntity => storageEntity.id, { eager: true })
-  @JoinColumn({ name: 'id_storage_entity' })
-  owner: StorageEntityEntity;
+    @ManyToOne(() => StorageEntityEntity, (storageEntity) => storageEntity.id, {
+        eager: true,
+    })
+    @JoinColumn({ name: 'id_storage_entity' })
+    owner: StorageEntityEntity;
 
-  @ManyToOne(() => CatMetricTypeEntity, { eager: true })
-  @JoinColumn({ name: 'id_cat_metric_type' })
-  metricTypeEntity: CatMetricTypeEntity;
+    @ManyToOne(() => CatMetricTypeEntity, { eager: true })
+    @JoinColumn({ name: 'id_cat_metric_type' })
+    metricTypeEntity: CatMetricTypeEntity;
 
-  metrics: any[];
+    metrics: unknown[];
 }

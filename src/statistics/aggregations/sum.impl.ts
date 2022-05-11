@@ -9,8 +9,7 @@ export class SumImpl extends AggregationAlgorithmAbstract {
 
     aggregate(
         entities: MetricEntityInterface[][],
-        metricType: MetricType,
-        options: any
+        metricType: MetricType
     ): MetricEntityInterface {
         let aggValueTotal = 0;
 

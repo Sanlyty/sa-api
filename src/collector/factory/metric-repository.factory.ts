@@ -14,44 +14,47 @@ import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity'
 
 @Injectable()
 export class MetricRepositoryFactory {
+    constructor(
+        @InjectRepository(SystemMetricEntity)
+        private systemRepository: Repository<SystemMetricEntity>,
+        @InjectRepository(PoolMetricEntity)
+        private poolRepository: Repository<PoolMetricEntity>,
+        @InjectRepository(ChaMetricEntity)
+        private adapterRepository: Repository<ChaMetricEntity>,
+        @InjectRepository(HostGroupMetricEntity)
+        private hostGroupRepository: Repository<HostGroupMetricEntity>,
+        @InjectRepository(PortMetricEntity)
+        private portRepository: Repository<PortMetricEntity>,
+        @InjectRepository(LatencyEntity)
+        private latencyRepository: Repository<LatencyEntity>,
+        @InjectRepository(ParityGroupMetricEntity)
+        private parityGroupRepository: Repository<ParityGroupMetricEntity>
+    ) {}
 
-  constructor(
-    @InjectRepository(SystemMetricEntity)
-    private systemRepository: Repository<SystemMetricEntity>,
-    @InjectRepository(PoolMetricEntity)
-    private poolRepository: Repository<PoolMetricEntity>,
-    @InjectRepository(ChaMetricEntity)
-    private adapterRepository: Repository<ChaMetricEntity>,
-    @InjectRepository(HostGroupMetricEntity)
-    private hostGroupRepository: Repository<HostGroupMetricEntity>,
-    @InjectRepository(PortMetricEntity)
-    private portRepository: Repository<PortMetricEntity>,
-    @InjectRepository(LatencyEntity)
-    private latencyRepository: Repository<LatencyEntity>,
-    @InjectRepository(ParityGroupMetricEntity)
-    private parityGroupRepository: Repository<ParityGroupMetricEntity>
-  ) {
-  }
-
-  public getByStorageEntityType(type: StorageEntityType, metricType: MetricType): Repository<AbstractMetricEntity|ParityGroupMetricEntity> {
-    switch (type) {
-      case StorageEntityType.SYSTEM:
-        return this.systemRepository;
-      case StorageEntityType.POOL:
-        if (metricType === MetricType.LATENCY_PER_BLOCK_SIZE) {
-          return this.latencyRepository;
+    public getByStorageEntityType(
+        type: StorageEntityType,
+        metricType: MetricType
+    ): Repository<AbstractMetricEntity | ParityGroupMetricEntity> {
+        switch (type) {
+            case StorageEntityType.SYSTEM:
+                return this.systemRepository;
+            case StorageEntityType.POOL:
+                if (metricType === MetricType.LATENCY_PER_BLOCK_SIZE) {
+                    return this.latencyRepository;
+                }
+                return this.poolRepository;
+            case StorageEntityType.ADAPTER_GROUP:
+                return this.adapterRepository;
+            case StorageEntityType.HOST_GROUP:
+                return this.hostGroupRepository;
+            case StorageEntityType.PORT_GROUP:
+                return this.portRepository;
+            case StorageEntityType.PARITY_GROUP:
+                return this.parityGroupRepository;
+            default:
+                throw new BadRequestException(
+                    `Cannot find repository for specified type '${StorageEntityType[type]}'`
+                );
         }
-        return this.poolRepository;
-      case StorageEntityType.ADAPTER_GROUP:
-        return this.adapterRepository;
-      case StorageEntityType.HOST_GROUP:
-        return this.hostGroupRepository;
-      case StorageEntityType.PORT_GROUP:
-        return this.portRepository;
-      case StorageEntityType.PARITY_GROUP:
-        return this.parityGroupRepository;
-      default:
-        throw new BadRequestException(`Cannot find repository for specified type \'${StorageEntityType[type]}\'`);
     }
-  }
 }

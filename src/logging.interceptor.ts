@@ -20,7 +20,10 @@ class RequestLogMessage {
 export class LoggingInterceptor implements NestInterceptor {
     private readonly logger = new Logger(LoggingInterceptor.name);
 
-    intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+    intercept<T>(
+        context: ExecutionContext,
+        next: CallHandler<T>
+    ): Observable<T> {
         const request = context.getArgs()[0];
         if (request === undefined) {
             return;

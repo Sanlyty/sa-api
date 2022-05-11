@@ -1,15 +1,12 @@
 import { TransformationError } from './transformation.error';
 import { MetricResponseDto } from '../dto/metric-response.dto';
 import { MetricType } from '../enums/metric-type.enum';
-import { Owner, StorageEntityType } from '../dto/owner.dto';
 import { SystemMetricEntity } from '../entities/system-metric.entity';
 import { PoolMetricEntity } from '../entities/pool-metric.entity';
 import { ChaMetricEntity } from '../entities/cha-metric.entity';
 import { PortMetricEntity } from '../entities/port-metric.entity';
 import { HostGroupMetricEntity } from '../entities/host-group-metric.entity';
 import { LatencyEntity } from '../entities/latency.entity';
-import { StorageEntityStatus } from '../enums/storage-entity-status.enum';
-import { isEmpty } from '@nestjs/common/utils/shared.utils';
 import { StorageEntityTransformer } from './storage-entity.transformer';
 import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity';
 
@@ -54,7 +51,7 @@ export class MetricTransformer {
             return MetricType[type];
         }
         throw new TransformationError(
-            `Metric type \'${type}\' from entity is not in enum 'MetricType'`
+            `Metric type '${type}' from entity is not in enum 'MetricType'`
         );
     }
 }

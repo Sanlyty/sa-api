@@ -61,7 +61,7 @@ export class LatencyMetricService {
         ];
 
         filterFields
-            .filter(([_, key]) => !isEmpty(filter[key]))
+            .filter(([, key]) => !isEmpty(filter[key]))
             .forEach(([field, key]) =>
                 query.andWhere(`${field} IN (:...${key})`, filter)
             );
@@ -92,12 +92,13 @@ export class LatencyMetricService {
                 ] as const) {
                     if (!isEmptyOrContains(filter.operations, opId)) continue;
 
-                    const maintData = await this.mainteinerService.getLatencyAnalysis(
-                        system.name,
-                        pool.name,
-                        op,
-                        filter.dates as any
-                    );
+                    const maintData =
+                        await this.mainteinerService.getLatencyAnalysis(
+                            system.name,
+                            pool.name,
+                            op,
+                            filter.dates as unknown as string[]
+                        );
 
                     maintData.forEach((row) => {
                         const latency = Math.pow(2, row[0]);
@@ -153,9 +154,10 @@ export class LatencyMetricService {
 
         await Promise.all(
             byMaintainer.map(async (m) => {
-                const newDates = await this.mainteinerService.getLatencyAnalysisDates(
-                    m.name
-                );
+                const newDates =
+                    await this.mainteinerService.getLatencyAnalysisDates(
+                        m.name
+                    );
 
                 newDates.forEach((d) => dates.add(d));
             })

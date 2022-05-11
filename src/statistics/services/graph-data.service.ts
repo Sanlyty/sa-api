@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SystemMetricService } from '../../collector/services/system-metric.service';
 import { GraphDataParams } from '../controllers/params/graph-data.params';
 import { PoolMetricService } from '../../collector/services/pool-metric.service';
+import { MetricType } from 'dist/src/collector/enums/metric-type.enum';
 
 export enum ServiceType {
     SYSTEM,
@@ -18,7 +19,7 @@ export class GraphDataService {
     async getGraphData(
         graphFilter: GraphDataParams,
         type: ServiceType
-    ): Promise<any[]> {
+    ): Promise<{ type: MetricType; data: unknown[] }[]> {
         const service = this.resolveService(type);
         return await Promise.all(
             graphFilter.types.map(async (type) => ({

@@ -48,7 +48,9 @@ export abstract class AggregatedMetricService {
 
     abstract getData(types: MetricType[], dataCenterIds: number[]);
 
-    abstract fetchMetricsOnly(entities: StorageEntityEntity[]): any[];
+    abstract fetchMetricsOnly(
+        entities: StorageEntityEntity[]
+    ): MetricEntityInterface[];
 
     public async fetchAggregatedMetricsGrouped(
         types: MetricType[],
@@ -81,13 +83,12 @@ export abstract class AggregatedMetricService {
             types.map(async (type) => {
                 const config = this.getStrategy(type);
                 const aggValue = config.algorithm.aggregate(
-                    metrics,
+                    metrics as unknown as MetricEntityInterface[][],
                     type,
                     config.options
                 );
-                aggValue.metricTypeEntity = await this.metricTypeService.findById(
-                    type
-                );
+                aggValue.metricTypeEntity =
+                    await this.metricTypeService.findById(type);
                 return aggValue;
             })
         );

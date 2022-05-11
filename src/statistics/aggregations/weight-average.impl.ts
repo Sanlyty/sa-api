@@ -10,7 +10,7 @@ export class WeightedAverageImpl extends AggregationAlgorithmAbstract {
     aggregate(
         entities: MetricEntityInterface[][],
         metricType: MetricType,
-        options: any
+        options: { weightType: MetricType; ignoreValueUnder: number }
     ): MetricEntityInterface {
         let weightValueTotal = 0;
         let aggValueTotal = 0;

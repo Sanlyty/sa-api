@@ -5,6 +5,6 @@ export interface MetricAggregationInterface {
     aggregate(
         entities: MetricEntityInterface[][],
         metricType: MetricType,
-        options: any
+        options: { weightType: MetricType; ignoreValueUnder: number }
     ): MetricEntityInterface;
 }

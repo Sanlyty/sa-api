@@ -7,6 +7,7 @@ import {
 import { MetricTypeService } from '../../collector/services/metric-type.service';
 import { MetricType } from '../../collector/enums/metric-type.enum';
 import { StorageEntityEntity } from '../../collector/entities/storage-entity.entity';
+import { MetricEntityInterface } from '../../collector/entities/metric-entity.interface';
 
 @Injectable()
 export class PoolAggregatedMetricService extends AggregatedMetricService {
@@ -17,7 +18,7 @@ export class PoolAggregatedMetricService extends AggregatedMetricService {
         super(dcService, typeService);
     }
 
-    fetchMetricsOnly(entities: StorageEntityEntity[]): any[] {
+    fetchMetricsOnly(entities: StorageEntityEntity[]): MetricEntityInterface[] {
         const result = [];
         entities.forEach((dataCenter) =>
             dataCenter.children.forEach((system) =>

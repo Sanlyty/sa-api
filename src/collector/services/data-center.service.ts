@@ -17,7 +17,6 @@ import { SortStorageEntityByMetricUtils } from '../../statistics/utils/sort-stor
 import { OrderByVo } from '../../statistics/utils/vo/order-by.vo';
 import { StorageEntityFilterVo } from '../../statistics/services/vos/storage-entity-filter.vo';
 import { OutputType } from '../../statistics/controllers/params/statistics.query-params';
-import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.entity';
 import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity';
 import { StatisticParams } from '../../statistics/controllers/params/statistic.params';
 import { MaintainerService } from './maintainer.service';
@@ -208,9 +207,7 @@ export class DataCenterService {
 
     async getChannelAdapterMetrics(
         metricTypes: MetricType[],
-        idDataCenterParam: number[],
-        metricGroup: MetricGroup,
-        period: PeriodType
+        idDataCenterParam: number[]
     ): Promise<StorageEntityEntity[]> {
         const query = this.querySystems(idDataCenterParam)
             .innerJoinAndSelect(
@@ -292,9 +289,7 @@ export class DataCenterService {
 
     async getHostGroupMetrics(
         metricTypes: MetricType[],
-        idDataCenterParam: number[],
-        metricGroup: MetricGroup,
-        period: PeriodType
+        idDataCenterParam: number[]
     ): Promise<StorageEntityEntity[]> {
         const query = this.querySystems(idDataCenterParam)
             .leftJoinAndSelect(
@@ -525,7 +520,7 @@ export class DataCenterService {
                                         unit: '%',
                                         idCatMetricGroup: MetricType.HDD_PERC,
                                         name: 'HDD_PERC',
-                                        threshold: undefined as any,
+                                        threshold: undefined,
                                     },
                                 }));
                         }

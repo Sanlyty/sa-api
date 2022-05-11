@@ -29,7 +29,7 @@ export class SystemAggregatedMetricService extends AggregatedMetricService {
         );
     }
 
-    fetchMetricsOnly(entities: StorageEntityEntity[]): any[] {
+    fetchMetricsOnly(entities: StorageEntityEntity[]) {
         const result = [];
         entities.forEach((dataCenter) =>
             dataCenter.children.forEach((system) => result.push(system.metrics))
