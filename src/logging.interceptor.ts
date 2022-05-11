@@ -12,17 +12,8 @@ class RequestLogMessage {
     execTime;
     responseBody;
     error;
-    private body;
-    private path;
-    private headers;
-    private params;
 
-    constructor(body, path, headers, params) {
-        this.body = body;
-        this.path = path;
-        this.headers = headers;
-        this.params = params;
-    }
+    constructor(private body, private path, private headers, private params) {}
 }
 
 @Injectable()
