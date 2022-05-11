@@ -1,11 +1,13 @@
-import { Injectable, HttpService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+import { HttpService } from '@nestjs/axios';
 import { readFileSync } from 'fs';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
-import { MetricGroup } from './data-center.service';
 import { MetricEntityInterface } from '../entities/metric-entity.interface';
+import { lastValueFrom } from 'rxjs';
 
 const metricNameMap: Record<string, string> = {
     RESPONSE: 'RESPONSE_READ_DAY',
+    RESPONSE_DAY: 'RESPONSE_READ_DAY',
     RESPONSE_WEEK: 'RESPONSE_READ_WEEK',
     RESPONSE_MONTH: 'RESPONSE_READ_MONTH',
 
@@ -78,9 +80,8 @@ export class MaintainerService {
         const maintainerUrl = this.maintainerMap[systemId];
 
         return (
-            await this.httpService
-                .post(`${maintainerUrl}features/latency_analysis_dates`)
-                .toPromise()
+            await lastValueFrom(this.httpService
+                .post(`${maintainerUrl}features/latency_analysis_dates`))
         ).data;
     }
 
@@ -93,13 +94,12 @@ export class MaintainerService {
         const maintainerUrl = this.maintainerMap[systemId];
 
         return (
-            await this.httpService
+            await lastValueFrom(this.httpService
                 .post(`${maintainerUrl}features/latency_analysis`, {
                     op,
                     dates,
                     pool: poolName,
-                })
-                .toPromise()
+                }))
         ).data;
     }
 
@@ -119,12 +119,12 @@ export class MaintainerService {
         const maintainerUrl = this.maintainerMap[systemId];
 
         return (
-            await this.httpService
+            await lastValueFrom(this.httpService
                 .post(`${maintainerUrl}features/pg_events`, {
                     from,
                     to,
                 })
-                .toPromise()
+            )
         ).data;
     }
 
@@ -248,9 +248,9 @@ export class MaintainerService {
 
         // console.log(metric);
         const dataranges: number[][] = (
-            await this.httpService
+            await lastValueFrom(this.httpService
                 .get(`${maintainerUrl}datasets/${metric}`)
-                .toPromise()
+            )
         ).data.dataranges;
 
         if (dataranges.length === 0) {
@@ -265,25 +265,25 @@ export class MaintainerService {
         const variants =
             options?.variants ??
             (
-                await this.httpService
+                await lastValueFrom(this.httpService
                     .post(`${maintainerUrl}features/variant_recommend`, {
                         id: metric,
                         from: (lastDate - 1).toString(),
                         to: lastDate.toString(),
                     })
-                    .toPromise()
+                )
             ).data;
 
         // console.log(variants);
 
         const data: number[][] = (
-            await this.httpService
+            await lastValueFrom(this.httpService
                 .post(`${maintainerUrl}bulkload_json/${metric}`, {
                     variants,
                     from: (lastDate - 1).toString(),
                     to: lastDate.toString(),
                 })
-                .toPromise()
+            )
         ).data;
 
         return {

@@ -1,4 +1,4 @@
-import { Logger } from '@nestjs/common';
+import { ConsoleLogger } from '@nestjs/common';
 import { createLogger, format } from 'winston';
 import * as WinstonDailyRotateFile from 'winston-daily-rotate-file';
 
@@ -25,7 +25,7 @@ const loggerComponent = createLogger({
   ],
 });
 
-export class WinstonLoggerService extends Logger {
+export class WinstonLoggerService extends ConsoleLogger {
   private winstonComponent = loggerComponent;
 
   log(message: string) {
