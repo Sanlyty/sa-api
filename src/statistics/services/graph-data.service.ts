@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SystemMetricService } from '../../collector/services/system-metric.service';
 import { GraphDataParams } from '../controllers/params/graph-data.params';
 import { PoolMetricService } from '../../collector/services/pool-metric.service';
-import { MetricType } from 'dist/src/collector/enums/metric-type.enum';
+import { MetricType } from '../../collector/enums/metric-type.enum';
 
 export enum ServiceType {
     SYSTEM,
