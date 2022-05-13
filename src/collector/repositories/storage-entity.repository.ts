@@ -8,9 +8,7 @@ import { KeyPart, StorageEntityKey } from '../utils/storage-entity-key.utils';
 import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.entity';
 
 @EntityRepository(StorageEntityEntity)
-export class StorageEntityRepository extends TreeRepository<
-    StorageEntityEntity
-> {
+export class StorageEntityRepository extends TreeRepository<StorageEntityEntity> {
     private hierachyType: ((
         query: SelectQueryBuilder<StorageEntityEntity>,
         type: StorageEntityType,
@@ -313,8 +311,9 @@ export class StorageEntityRepository extends TreeRepository<
             });
 
         if (datacenters && datacenters.length > 0) {
-            query.andWhere('datacenter.id IN (:...idDatacenter)', {
-                idDatacenter: datacenters,
+            console.log(datacenters.map((d) => Number(d)));
+            return query.andWhere('datacenter.id IN (:...idDatacenter)', {
+                idDatacenter: datacenters.map((d) => Number(d)),
             });
         }
 

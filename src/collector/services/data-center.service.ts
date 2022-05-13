@@ -21,7 +21,6 @@ import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity'
 import { StatisticParams } from '../../statistics/controllers/params/statistic.params';
 import { MaintainerService } from './maintainer.service';
 import metricTypeMap, { maintainerMetricMap } from './metric-type-map';
-import { isNullOrUndefined } from 'util';
 
 export const enum MetricGroup {
     PERFORMANCE = 1,
@@ -85,7 +84,9 @@ export class DataCenterService {
             return fnMap[metricGroup].call(
                 this,
                 DataCenterService.resolveMetricTypes(metricGroup, period),
-                isNullOrUndefined(idDataCenter) ? [] : [idDataCenter],
+                idDataCenter === undefined || idDataCenter === null
+                    ? []
+                    : [idDataCenter],
                 metricGroup,
                 period,
                 statisticParams.fromDate,
@@ -165,7 +166,7 @@ export class DataCenterService {
                 { metrics: metricTypes }
             )
             .leftJoinAndSelect('metrics.metricTypeEntity', 'typeEntity')
-            .where('pool.idCatComponentStatus = :idStatus', {
+            .andWhere('pool.idCatComponentStatus = :idStatus', {
                 idStatus: StorageEntityStatus.ACTIVE,
             });
 
@@ -244,7 +245,7 @@ export class DataCenterService {
                 'adapter_metrics.metricTypeEntity',
                 'adapterTypeEntity'
             )
-            .where('adapter.idCatComponentStatus = :idStatus', {
+            .andWhere('adapter.idCatComponentStatus = :idStatus', {
                 idStatus: StorageEntityStatus.ACTIVE,
             })
             .andWhere('port.idCatComponentStatus = :idPortStatus', {
@@ -307,7 +308,7 @@ export class DataCenterService {
             )
             .leftJoinAndSelect('metrics.metricTypeEntity', 'typeEntity')
             .leftJoinAndSelect('hostGroup.externals', 'external')
-            .where('hostGroup.idCatComponentStatus = :idStatus', {
+            .andWhere('hostGroup.idCatComponentStatus = :idStatus', {
                 idStatus: StorageEntityStatus.ACTIVE,
             });
 
@@ -392,7 +393,7 @@ export class DataCenterService {
             )
             .leftJoinAndSelect('pool.externals', 'external')
             .leftJoinAndSelect('metrics.metricTypeEntity', 'typeEntity')
-            .andWhere(
+            .Where(
                 'pool.id IN (:...ids) AND pool.idCatComponentStatus = :poolStatus',
                 { ids: poolIds, poolStatus: StorageEntityStatus.ACTIVE }
             )
@@ -482,14 +483,14 @@ export class DataCenterService {
                 { metrics: types }
             )
             .leftJoinAndSelect('metrics.metricTypeEntity', 'typeEntity')
-            .where('parityGroup.idCatComponentStatus = :idStatus', {
+            .andWhere('parityGroup.idCatComponentStatus = :idStatus', {
                 idStatus: StorageEntityStatus.ACTIVE,
             })
             .andWhere(
-                '(metrics.startTime >= :fromTime AND metrics.endTime <= :toTime) OR system.name IN (:...maintained)',
+                '((metrics.startTime >= :fromTime AND metrics.endTime <= :toTime) OR system.name IN (:...maintained))',
                 {
-                    fromTime: new Date(fromDate),
-                    toTime: new Date(toDate),
+                    fromTime: new Date(Number(fromDate)),
+                    toTime: new Date(Number(toDate)),
                     maintained: this.maintainerService.getHandledSystems(),
                 }
             );
@@ -502,8 +503,8 @@ export class DataCenterService {
                 if (this.maintainerService.handlesSystem(system.name)) {
                     const data = await this.maintainerService.getPGEvents(
                         system.name,
-                        fromDate,
-                        toDate
+                        Number(fromDate),
+                        Number(toDate)
                     );
 
                     for (const pool of system.children) {
