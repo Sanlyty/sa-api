@@ -117,14 +117,23 @@ const metricTypeMap: MetricTypeMap = {
     },
 };
 
+const multiply = (by: number) => (x: number) => by * x;
+const roundToOrder = (order: number) => (x: number) =>
+    Math.round(x * Math.pow(10, order)) / Math.pow(10, order);
+
 type MaintainerMetricMap = Record<
     Exclude<MetricGroup, MetricGroup.ADAPTERS> | 'ADAPTER_PORT' | 'ADAPTER',
-    { id: string; target?: string; unit: string }[]
+    {
+        id: string;
+        metric?: string;
+        unit: string;
+        preproc?: (val: number) => number;
+    }[]
 >;
 export const maintainerMetricMap: MaintainerMetricMap = {
     [MetricGroup.PERFORMANCE]: [
-        { id: 'WORKLOAD', unit: 'IOPS' },
-        { id: 'TRANSFER', unit: 'MBps' },
+        { id: 'WORKLOAD', unit: 'IOPS', preproc: Math.round },
+        { id: 'TRANSFER', unit: 'MBps', preproc: Math.round },
         { id: 'RESPONSE', unit: 'ms' },
         // { id: 'RESPONSE_READ', unit: 'ms' },
         // { id: 'RESPONSE_WRITE', unit: 'ms' },
@@ -142,9 +151,24 @@ export const maintainerMetricMap: MaintainerMetricMap = {
         { id: 'PREDICTION_L1', unit: 'days' },
         { id: 'PREDICTION_L2', unit: 'days' },
         { id: 'PREDICTION_L3', unit: 'days' },
-        { id: 'CHANGE_DAY', unit: 'GB' },
-        { id: 'CHANGE_WEEK', unit: 'GB' },
-        { id: 'CHANGE_MONTH', unit: 'GB' },
+        {
+            id: 'CHANGE_DAY',
+            unit: 'GB',
+            metric: 'PHYSICAL_USED_DAY',
+            preproc: multiply(1024),
+        },
+        {
+            id: 'CHANGE_WEEK',
+            unit: 'GB',
+            metric: 'PHYSICAL_USED_WEEK',
+            preproc: multiply(1024),
+        },
+        {
+            id: 'CHANGE_MONTH',
+            unit: 'GB',
+            metric: 'PHYSICAL_USED_MONTH',
+            preproc: multiply(1024),
+        },
         { id: 'PHYSICAL_USED', unit: 'TB' },
         { id: 'PHYSICAL_FREE', unit: 'TB' },
         { id: 'LOGICAL_CAPACITY', unit: 'TB' },
@@ -166,22 +190,65 @@ export const maintainerMetricMap: MaintainerMetricMap = {
         { id: 'OUT_OF_SLA_TIME', unit: 's' },
     ],
     ADAPTER: [
-        { id: 'IMBALANCE_EVENTS', unit: '' },
-        { id: 'IMBALANCE_ABSOLUT', unit: 'MBps' },
-        { id: 'IMBALANCE_PERC', unit: '%' },
+        {
+            id: 'IMBALANCE_EVENTS',
+            metric: 'CHANNEL_IMBALANCES_COUNT',
+            unit: '',
+        },
+        {
+            id: 'IMBALANCE_ABSOLUT',
+            metric: 'CHANNEL_IMBALANCES',
+            unit: 'MBps',
+            preproc: roundToOrder(1),
+        },
+        {
+            id: 'IMBALANCE_PERC',
+            metric: 'CHANNEL_IMBALANCES_PERC',
+            unit: '%',
+            preproc: roundToOrder(1),
+        },
     ],
     ADAPTER_PORT: [
-        { id: 'PORT_IMBALANCE_EVENTS', unit: '' },
-        { id: 'PORT_IMBALANCE_ABSOLUT', unit: 'MBps' },
-        { id: 'PORT_IMBALANCE_PERC', unit: '%' },
+        {
+            id: 'PORT_IMBALANCE_EVENTS',
+            metric: 'PORT_IMBALANCES_COUNT',
+            unit: '',
+        },
+        {
+            id: 'PORT_IMBALANCE_ABSOLUT',
+            metric: 'PORT_IMBALANCES',
+            unit: 'MBps',
+            preproc: roundToOrder(1),
+        },
+        {
+            id: 'PORT_IMBALANCE_PERC',
+            metric: 'PORT_IMBALANCES_PERC',
+            unit: '%',
+            preproc: roundToOrder(1),
+        },
     ],
     [MetricGroup.HOST_GROUPS]: [
-        { id: 'NET_TOTAL', unit: 'TB' },
-        { id: 'NET_USED', unit: 'TB' },
-        { id: 'NET_USED_PERC', unit: '%' },
-        { id: 'CHANGE_DAY', unit: 'GB' },
-        { id: 'CHANGE_WEEK', unit: 'GB' },
-        { id: 'CHANGE_MONTH', unit: 'GB' },
+        { id: 'NET_TOTAL', metric: 'VMW_NET_TOTAL', unit: 'TB' },
+        { id: 'NET_USED', metric: 'VMW_NET_USED', unit: 'TB' },
+        { id: 'NET_USED_PERC', metric: 'VMW_NET_USED_PERC', unit: '%' },
+        {
+            id: 'CHANGE_DAY',
+            metric: 'VMW_NET_USED_DAY',
+            unit: 'GB',
+            preproc: multiply(1024),
+        },
+        {
+            id: 'CHANGE_WEEK',
+            metric: 'VMW_NET_USED_WEEK',
+            unit: 'GB',
+            preproc: multiply(1024),
+        },
+        {
+            id: 'CHANGE_MONTH',
+            metric: 'VMW_NET_USED_MONTH',
+            unit: 'GB',
+            preproc: multiply(1024),
+        },
     ],
     [MetricGroup.PARITY_GROUPS]: [{ id: 'HDD_PERC', unit: '%' }],
 };

@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { readFileSync } from 'fs';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
-import { MetricEntityInterface } from '../entities/metric-entity.interface';
 import { lastValueFrom } from 'rxjs';
 
 const metricNameMap: Record<string, string> = {
@@ -139,103 +138,70 @@ export class MaintainerService {
         systemId: string,
         entities: StorageEntityEntity[],
         dataKeySelector: MetricColSelector,
-        options?: {
+        options: {
             additionalKeys?: Record<string, MetricColSelector>;
-            metrics?: {
+            metrics: {
                 id: string;
-                target?: string;
+                metric?: string;
                 unit: string;
+                preproc?: (val: number) => number;
             }[];
-            metricNameTransform?: (m: string) => string;
-            skipMetric?: (m: MetricEntityInterface) => boolean;
         }
     ) {
         const metricData: Record<
             string,
-            { data: LastMaintainerData; target?: string; unit: string }
+            { data: LastMaintainerData; unit: string }
         > = {};
 
-        if (options?.metrics) {
-            // Preset metrics
-
-            for (const metric of options.metrics) {
-                metricData[metric.id] = {
-                    data: await this.getLastMaintainerData(systemId, metric.id),
-                    target: metric.target,
-                    unit: metric.unit,
-                };
-            }
-        } else {
-            // Autodetect metrics
-
-            const known: Set<string> = new Set();
-            await Promise.all(
-                entities.flatMap((e) =>
-                    e.metrics.map(async (m) => {
-                        if (options?.skipMetric && options.skipMetric(m)) {
-                            return;
-                        }
-
-                        const metricName = m.metricTypeEntity.name;
-
-                        // ? Why not check for key in 'metricData'
-                        // A The assignment is after an await point -> redundant calls
-                        if (!known.has(metricName)) {
-                            known.add(metricName);
-                            metricData[metricName] = {
-                                data: await this.getLastMaintainerData(
-                                    systemId,
-                                    options?.metricNameTransform
-                                        ? options.metricNameTransform(
-                                              metricName
-                                          )
-                                        : metricName
-                                ),
-                                unit: m.metricTypeEntity.unit,
-                            };
-                        }
-                    })
-                )
+        for (const metric of options.metrics) {
+            const data = await this.getLastMaintainerData(
+                systemId,
+                metric.metric ?? metric.id
             );
+
+            if (metric.preproc) {
+                for (const key in data.cols) {
+                    data.cols[key] = metric.preproc(data.cols[key]);
+                }
+            }
+
+            console.log(metric.id);
+            console.log(data);
+
+            metricData[metric.id] = {
+                data,
+                unit: metric.unit,
+            };
         }
 
         entities.forEach((e) => {
             // Retain skipped metrics
-            e.metrics =
-                e.metrics?.filter(
-                    (m) => options?.skipMetric && options.skipMetric(m)
-                ) ?? [];
+            e.metrics = Object.keys(metricData).map((metricId) => {
+                const mData = metricData[metricId];
 
-            //  Fill in obtained metrics
-            e.metrics.push(
-                ...Object.keys(metricData).map((metricId) => {
-                    const mData = metricData[metricId];
-
-                    const result = {
+                const result = {
+                    id: -1,
+                    metricTypeEntity: {
                         id: -1,
-                        metricTypeEntity: {
-                            id: -1,
-                            name: mData.target ?? metricId,
-                            unit: mData.unit,
-                            threshold: undefined,
-                            idCatMetricGroup: undefined,
-                        },
-                        date: mData.data.date,
-                        value:
-                            mData.data.cols[dataKeySelector(e, metricId)] ?? 0,
-                    };
+                        name: metricId,
+                        unit: mData.unit,
+                        threshold: undefined,
+                        idCatMetricGroup: undefined,
+                    },
+                    date: mData.data.date,
+                    value: mData.data.cols[dataKeySelector(e, metricId)] ?? 0,
+                };
 
-                    // Assign additional keys other than 'value'
-                    for (const additional in options?.additionalKeys) {
-                        result[additional] =
-                            mData.data.cols[
-                                options.additionalKeys[additional](e, metricId)
-                            ] ?? 0;
-                    }
+                // Assign additional keys other than 'value'
+                for (const additional in options?.additionalKeys) {
+                    result[additional] =
+                        mData.data.cols[
+                            options.additionalKeys[additional](e, metricId)
+                        ] ?? 0;
+                }
 
-                    return result;
-                })
-            );
+                return result;
+            });
         });
     }
 
@@ -253,7 +219,7 @@ export class MaintainerService {
         const maintainerUrl = this.maintainerMap[id];
         metric = metricNameMap[metric] ?? metric;
 
-        // console.log(metric);
+        console.log(metric);
         const dataranges: number[][] = (
             await lastValueFrom(
                 this.httpService.get(`${maintainerUrl}datasets/${metric}`)
@@ -284,7 +250,7 @@ export class MaintainerService {
                 )
             ).data;
 
-        // console.log(variants);
+        console.log(variants);
 
         const data: number[][] = (
             await lastValueFrom(

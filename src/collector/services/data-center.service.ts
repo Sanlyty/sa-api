@@ -132,8 +132,7 @@ export class DataCenterService {
                                 MetricGroup.PERFORMANCE
                             ].map((m) => ({
                                 ...m,
-                                target: m.id,
-                                id: `${m.id}_${period}`,
+                                metric: `${m.id}_${period}`,
                             })),
                             additionalKeys: { peak: () => 'peak' },
                         }
@@ -193,8 +192,7 @@ export class DataCenterService {
                             metrics: maintainerMetricMap[MetricGroup.SLA].map(
                                 (m) => ({
                                     ...m,
-                                    id: `${m.id}_${period}`,
-                                    target: m.id,
+                                    metric: `${m.id}_${period}`,
                                 })
                             ),
                         }
@@ -323,7 +321,6 @@ export class DataCenterService {
                         system.children, // HostGroups
                         (e) => e.name,
                         {
-                            metricNameTransform: (n) => 'VMW_' + n,
                             metrics:
                                 maintainerMetricMap[MetricGroup.HOST_GROUPS],
                         }
@@ -498,17 +495,22 @@ export class DataCenterService {
         const datacenters = await query.getMany();
 
         for (const datacenter of datacenters) {
+            const yankedSystems = new Set();
+
             for (const system of datacenter.children) {
                 // Is configured via a maintainer?
                 if (this.maintainerService.handlesSystem(system.name)) {
+                    let empty = true;
+
                     const data = await this.maintainerService.getPGEvents(
                         system.name,
-                        Number(fromDate),
+                        Number(fromDate - 400 * 24 * 60 * 60_000),
                         Number(toDate)
                     );
 
                     for (const pool of system.children) {
                         for (const parityGroup of pool.children) {
+                            console.log(parityGroup.name);
                             parityGroup.metrics = data
                                 .filter(({ key }) => key === parityGroup.name)
                                 .map((row) => ({
@@ -524,10 +526,22 @@ export class DataCenterService {
                                         threshold: undefined,
                                     },
                                 }));
+
+                            if (parityGroup.metrics.length > 0) {
+                                empty = false;
+                            }
                         }
+                    }
+
+                    if (empty) {
+                        yankedSystems.add(system.id);
                     }
                 }
             }
+
+            datacenter.children = datacenter.children.filter(
+                ({ id }) => !yankedSystems.has(id)
+            );
         }
 
         return datacenters;
