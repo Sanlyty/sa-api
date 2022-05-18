@@ -504,7 +504,7 @@ export class DataCenterService {
 
                     const data = await this.maintainerService.getPGEvents(
                         system.name,
-                        Number(fromDate - 400 * 24 * 60 * 60_000),
+                        Number(fromDate),
                         Number(toDate)
                     );
 

@@ -134,7 +134,18 @@ export const maintainerMetricMap: MaintainerMetricMap = {
     [MetricGroup.PERFORMANCE]: [
         { id: 'WORKLOAD', unit: 'IOPS', preproc: Math.round },
         { id: 'TRANSFER', unit: 'MBps', preproc: Math.round },
-        { id: 'RESPONSE', unit: 'ms' },
+        {
+            id: 'RESPONSE',
+            metric: 'RESPONSE_READ',
+            unit: 'ms',
+            preproc: roundToOrder(1),
+        },
+        {
+            id: 'RESPONSE_WRITE',
+            metric: 'RESPONSE_WRITE',
+            unit: 'ms',
+            preproc: roundToOrder(1),
+        },
         // { id: 'RESPONSE_READ', unit: 'ms' },
         // { id: 'RESPONSE_WRITE', unit: 'ms' },
         { id: 'CPU_PERC', unit: '%' },
