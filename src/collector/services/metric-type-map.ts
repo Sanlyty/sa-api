@@ -210,7 +210,7 @@ export const maintainerMetricMap: MaintainerMetricMap = {
             id: 'IMBALANCE_ABSOLUT',
             metric: 'CHANNEL_IMBALANCES',
             unit: 'MBps',
-            preproc: roundToOrder(1),
+            preproc: (x) => Math.round((10 * x) / 1024) / 10,
         },
         {
             id: 'IMBALANCE_PERC',
@@ -229,7 +229,7 @@ export const maintainerMetricMap: MaintainerMetricMap = {
             id: 'PORT_IMBALANCE_ABSOLUT',
             metric: 'PORT_IMBALANCES',
             unit: 'MBps',
-            preproc: roundToOrder(1),
+            preproc: (x) => Math.round((10 * x) / 1024) / 10,
         },
         {
             id: 'PORT_IMBALANCE_PERC',

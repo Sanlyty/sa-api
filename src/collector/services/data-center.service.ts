@@ -258,6 +258,9 @@ export class DataCenterService {
                 .map((port) => `CL${port.slice(0, -1)}-${port.slice(-1)}`)
                 .join(',');
 
+        const ABS_THRESHOLD = 20;
+        const REL_THRESHOLD = 10;
+
         for (const datacenter of datacenters) {
             for (const system of datacenter.children) {
                 // Is configured via a maintainer?
@@ -271,6 +274,20 @@ export class DataCenterService {
                         }
                     );
 
+                    system.children.forEach((adapterGroup) => {
+                        const abs = adapterGroup.metrics.find(
+                            (m) =>
+                                m.metricTypeEntity.name === 'IMBALANCE_ABSOLUT'
+                        )?.value;
+                        const rel = adapterGroup.metrics.find(
+                            (m) => m.metricTypeEntity.name === 'IMBALANCE_PERC'
+                        )?.value;
+
+                        if (abs < ABS_THRESHOLD || rel < REL_THRESHOLD) {
+                            adapterGroup.metrics = [];
+                        }
+                    });
+
                     await this.maintainerService.getMetricsForEntities(
                         system.name,
                         system.children.flatMap((c) => c.children), // PortGroups
@@ -279,6 +296,25 @@ export class DataCenterService {
                             metrics: maintainerMetricMap.ADAPTER_PORT,
                         }
                     );
+
+                    system.children
+                        .flatMap((c) => c.children)
+                        .forEach((portGroup) => {
+                            const abs = portGroup.metrics.find(
+                                (m) =>
+                                    m.metricTypeEntity.name ===
+                                    'PORT_IMBALANCE_ABSOLUT'
+                            )?.value;
+                            const rel = portGroup.metrics.find(
+                                (m) =>
+                                    m.metricTypeEntity.name ===
+                                    'PORT_IMBALANCE_PERC'
+                            )?.value;
+
+                            if (abs < ABS_THRESHOLD || rel < REL_THRESHOLD) {
+                                portGroup.metrics = [];
+                            }
+                        });
                 }
             }
         }
@@ -510,7 +546,6 @@ export class DataCenterService {
 
                     for (const pool of system.children) {
                         for (const parityGroup of pool.children) {
-                            console.log(parityGroup.name);
                             parityGroup.metrics = data
                                 .filter(({ key }) => key === parityGroup.name)
                                 .map((row) => ({
