@@ -546,8 +546,6 @@ export class DataCenterService {
                         Number(toDate)
                     );
 
-                    console.log(data);
-
                     for (const pool of system.children) {
                         for (const parityGroup of pool.children) {
                             parityGroup.metrics = data
