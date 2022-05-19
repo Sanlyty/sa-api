@@ -11,7 +11,6 @@ import { StorageEntityStatus } from '../../collector/enums/storage-entity-status
 import { MetricEntityInterface } from '../../collector/entities/metric-entity.interface';
 import { StorageEntityTransformer } from '../../collector/transformers/storage-entity.transformer';
 import { StorageMetricEntityFlatDto } from '../models/dtos/storage-metric-entity-flat.dto';
-import { ParityGroupMetricEntity } from '../../collector/entities/parity-group-metric.entity';
 
 export class StorageEntityMetricTransformer {
     private static excludedMetric = [
@@ -130,9 +129,11 @@ export class StorageEntityMetricTransformer {
             metricDetail.peak = metric['peak'];
         }
 
-        if (metric instanceof ParityGroupMetricEntity) {
-            metricDetail.startTime = metric.startTime.getTime();
-            metricDetail.endTime = metric.endTime.getTime();
+        if ('startTime' in metric) {
+            metricDetail.startTime = Number(metric['startTime']);
+        }
+        if ('endTime' in metric) {
+            metricDetail.endTime = Number(metric['endTime']);
         }
 
         return metricDetail;

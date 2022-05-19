@@ -274,6 +274,7 @@ export class DataCenterService {
                         }
                     );
 
+                    // FIXME
                     system.children.forEach((adapterGroup) => {
                         const abs = adapterGroup.metrics.find(
                             (m) =>
@@ -297,6 +298,7 @@ export class DataCenterService {
                         }
                     );
 
+                    // FIXME
                     system.children
                         .flatMap((c) => c.children)
                         .forEach((portGroup) => {
@@ -544,15 +546,20 @@ export class DataCenterService {
                         Number(toDate)
                     );
 
+                    console.log(data);
+
                     for (const pool of system.children) {
                         for (const parityGroup of pool.children) {
                             parityGroup.metrics = data
                                 .filter(({ key }) => key === parityGroup.name)
                                 .map((row) => ({
                                     id: -1,
-                                    value: row.average,
-                                    peak: row.peak,
-                                    date: new Date((row.from + row.to) / 2),
+                                    value: Math.round(10 * row.average) / 10,
+                                    peak: Math.round(10 * row.peak) / 10,
+                                    startTime: row.from,
+                                    endTime: row.to,
+                                    date: ((row.from + row.to) /
+                                        2) as unknown as Date,
                                     metricTypeEntity: {
                                         id: -1,
                                         unit: '%',
