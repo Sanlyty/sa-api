@@ -132,7 +132,7 @@ export class DataCenterService {
                                 MetricGroup.PERFORMANCE
                             ].map((m) => ({
                                 ...m,
-                                metric: `${m.id}_${period}`,
+                                metric: `${m.metric ?? m.id}_${period}`,
                             })),
                             additionalKeys: { peak: () => 'peak' },
                         }
@@ -184,19 +184,29 @@ export class DataCenterService {
                         }
                     );
                 } else {
-                    await this.maintainerService.getMetricsForEntities(
-                        system.name,
-                        system.children, // Pools
-                        (e) => e.serialNumber,
-                        {
-                            metrics: maintainerMetricMap[MetricGroup.SLA].map(
-                                (m) => ({
-                                    ...m,
-                                    metric: `${m.id}_${period}`,
-                                })
-                            ),
-                        }
-                    );
+                    // TODO: WIP
+                    const duration =
+                        await this.maintainerService.getLastMaintainerData(
+                            system.name,
+                            `OUT_OF_SLA_TIME_${period}`
+                        );
+
+                    system.children.forEach((c) => {
+                        c.metrics = [
+                            {
+                                id: -1,
+                                date: duration.date,
+                                value: (duration.cols[c.name] ?? 0) * 60,
+                                metricTypeEntity: {
+                                    id: -1,
+                                    name: 'OUT_OF_SLA_TIME',
+                                    unit: 'm',
+                                    idCatMetricGroup: -1,
+                                    threshold: undefined,
+                                },
+                            },
+                        ];
+                    });
                 }
             }
         }

@@ -3,55 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { readFileSync } from 'fs';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { lastValueFrom } from 'rxjs';
-
-const metricNameMap: Record<string, string> = {
-    RESPONSE: 'RESPONSE_READ_DAY',
-    RESPONSE_DAY: 'RESPONSE_READ_DAY',
-    RESPONSE_WEEK: 'RESPONSE_READ_WEEK',
-    RESPONSE_MONTH: 'RESPONSE_READ_MONTH',
-
-    CHANGE_DAY: 'PHYSICAL_USED_DAY',
-    CHANGE_WEEK: 'PHYSICAL_USED_WEEK',
-    CHANGE_MONTH: 'PHYSICAL_USED_MONTH',
-
-    PHYSICAL_FREE: 'AVAILABLE_CAPACITY',
-
-    // TODO: figure out these
-    VMW_CHANGE_DAY: 'VMW_NET_USED_DAY',
-    VMW_CHANGE_WEEK: 'VMW_NET_USED_WEEK',
-    VMW_CHANGE_MONTH: 'VMW_NET_USED_MONTH',
-
-    // TODO:
-    SLA_EVENTS_DAY: 'SLA_EVENTS',
-    SLA_EVENTS_WEEK: 'SLA_EVENTS',
-    SLA_EVENTS_MONTH: 'SLA_EVENTS',
-    OUT_OF_SLA_TIME: 'OUT_OF_SLA_TIME_DAY',
-
-    // Imbalances
-    IMBALANCE_ABSOLUT: 'CHANNEL_IMBALANCES',
-    IMBALANCE_ABSOLUT_WEEK: 'CHANNEL_IMBALANCES_WEEK',
-    IMBALANCE_ABSOLUT_MONTH: 'CHANNEL_IMBALANCES_MONTH',
-
-    IMBALANCE_PERC: 'CHANNEL_IMBALANCES_PERC',
-    IMBALANCE_PERC_WEEK: 'CHANNEL_IMBALANCES_PERC_WEEK',
-    IMBALANCE_PERC_MONTH: 'CHANNEL_IMBALANCES_PERC_MONTH',
-
-    IMBALANCE_EVENTS: 'CHANNEL_IMBALANCES_COUNT',
-    IMBALANCE_EVENTS_WEEK: 'CHANNEL_IMBALANCES_COUNT_WEEK',
-    IMBALANCE_EVENTS_MONTH: 'CHANNEL_IMBALANCES_COUNT_MONTH',
-
-    PORT_IMBALANCE_ABSOLUT: 'PORT_IMBALANCES',
-    PORT_IMBALANCE_ABSOLUT_WEEK: 'PORT_IMBALANCES_WEEK',
-    PORT_IMBALANCE_ABSOLUT_MONTH: 'PORT_IMBALANCES_MONTH',
-
-    PORT_IMBALANCE_PERC: 'PORT_IMBALANCES_PERC',
-    PORT_IMBALANCE_PERC_WEEK: 'PORT_IMBALANCES_PERC_WEEK',
-    PORT_IMBALANCE_PERC_MONTH: 'PORT_IMBALANCES_PERC_MONTH',
-
-    PORT_IMBALANCE_EVENTS: 'PORT_IMBALANCES_COUNT',
-    PORT_IMBALANCE_EVENTS_WEEK: 'PORT_IMBALANCES_COUNT_WEEK',
-    PORT_IMBALANCE_EVENTS_MONTH: 'PORT_IMBALANCES_COUNT_MONTH',
-};
+import { PeriodType } from '../enums/period-type.enum';
 
 @Injectable()
 export class MaintainerService {
@@ -134,6 +86,28 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getSLAEvents(
+        systemId: string,
+        period: PeriodType
+    ): Promise<{ [poolName: string]: { duration: number; events: number } }> {
+        // const maintainerUrl = this.maintainerMap[systemId];
+        const durations = await this.getLastMaintainerData(
+            systemId,
+            `OUT_OF_SLA_TIME_${period}`
+        );
+
+        const result = {};
+
+        for (const key in durations.cols) {
+            result[key] = {
+                duration: durations.cols[key],
+                events: 1,
+            };
+        }
+
+        return result;
+    }
+
     public async getMetricsForEntities(
         systemId: string,
         entities: StorageEntityEntity[],
@@ -205,21 +179,20 @@ export class MaintainerService {
         });
     }
 
-    public async getLastMaintainerData(
+    public async getMaintainerData(
         id: string,
         metric: string,
+        duration: number,
         options?: {
             variants?: string[];
         }
-    ): Promise<LastMaintainerData | undefined> {
+    ): Promise<{ variants: string[]; data: [number, ...number[]][] }> {
         if (!this.handlesSystem(id)) {
             return undefined;
         }
 
         const maintainerUrl = this.maintainerMap[id];
-        metric = metricNameMap[metric] ?? metric;
 
-        console.log(metric);
         const dataranges: number[][] = (
             await lastValueFrom(
                 this.httpService.get(`${maintainerUrl}datasets/${metric}`)
@@ -228,8 +201,8 @@ export class MaintainerService {
 
         if (dataranges.length === 0) {
             return {
-                date: new Date(),
-                cols: {},
+                variants: [],
+                data: [],
             };
         }
 
@@ -243,22 +216,20 @@ export class MaintainerService {
                         `${maintainerUrl}features/variant_recommend`,
                         {
                             id: metric,
-                            from: (lastDate - 1).toString(),
+                            from: (lastDate - duration).toString(),
                             to: lastDate.toString(),
                         }
                     )
                 )
             ).data;
 
-        console.log(variants);
-
-        const data: number[][] = (
+        const data: [number, ...number[]][] = (
             await lastValueFrom(
                 this.httpService.post(
                     `${maintainerUrl}bulkload_json/${metric}`,
                     {
                         variants,
-                        from: (lastDate - 1).toString(),
+                        from: (lastDate - duration).toString(),
                         to: lastDate.toString(),
                     }
                 )
@@ -266,11 +237,42 @@ export class MaintainerService {
         ).data;
 
         return {
-            date: new Date(data[0][0] * 60_000),
-            cols: variants.reduce((prev, next, i) => {
-                prev[next] = data[0][i + 1];
-                return prev;
-            }, {}),
+            variants,
+            data,
+        };
+    }
+
+    public async getLastMaintainerData(
+        id: string,
+        metric: string,
+        options?: {
+            variants?: string[];
+        }
+    ): Promise<LastMaintainerData | undefined> {
+        if (!this.handlesSystem(id)) {
+            return undefined;
+        }
+
+        const { variants, data } = await this.getMaintainerData(
+            id,
+            metric,
+            1,
+            options
+        );
+
+        if (variants.length === 0 || data.length === 0) {
+            return {
+                date: new Date(),
+                cols: {},
+            };
+        }
+
+        return {
+            date: new Date(Number(data[0][0]) * 60_000),
+            cols: variants.reduce(
+                (p, k, i) => ({ ...p, [k]: data[0][i + 1] }),
+                {}
+            ),
         };
     }
 }
