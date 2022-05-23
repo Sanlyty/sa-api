@@ -206,7 +206,9 @@ export class DataCenterService {
 
     async getChannelAdapterMetrics(
         metricTypes: MetricType[],
-        idDataCenterParam: number[]
+        idDataCenterParam: number[],
+        metricGroup: MetricGroup,
+        period: PeriodType
     ): Promise<StorageEntityEntity[]> {
         const query = this.querySystems(idDataCenterParam)
             .innerJoinAndSelect(
@@ -258,6 +260,9 @@ export class DataCenterService {
                 .map((port) => `CL${port.slice(0, -1)}-${port.slice(-1)}`)
                 .join(',');
 
+        const appendPeriod = (metric: string) =>
+            period !== 'DAY' ? `${metric}_${period}` : metric;
+
         const ABS_THRESHOLD = 20;
         const REL_THRESHOLD = 10;
 
@@ -270,7 +275,10 @@ export class DataCenterService {
                         system.children, // AdapterGroups
                         (e) => e.name,
                         {
-                            metrics: maintainerMetricMap.ADAPTER,
+                            metrics: maintainerMetricMap.ADAPTER.map((m) => ({
+                                ...m,
+                                metric: appendPeriod(m.metric),
+                            })),
                         }
                     );
 
@@ -294,7 +302,12 @@ export class DataCenterService {
                         system.children.flatMap((c) => c.children), // PortGroups
                         (e) => longPortGroupName(e.name),
                         {
-                            metrics: maintainerMetricMap.ADAPTER_PORT,
+                            metrics: maintainerMetricMap.ADAPTER_PORT.map(
+                                (m) => ({
+                                    ...m,
+                                    metric: appendPeriod(m.metric),
+                                })
+                            ),
                         }
                     );
 
