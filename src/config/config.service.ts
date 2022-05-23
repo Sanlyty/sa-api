@@ -37,7 +37,10 @@ export class ConfigService {
         return {
             host,
             port: port ? Number(port) : undefined,
-            auth: { user, pass },
+            auth:
+                user || pass
+                    ? { user: user || undefined, pass: pass || undefined }
+                    : undefined,
         };
     }
 

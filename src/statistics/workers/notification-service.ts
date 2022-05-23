@@ -25,6 +25,13 @@ export class NotificationService {
 
         if (existsSync('last_notify'))
             this.lastChecked = Number(readFileSync('last_notify'));
+
+        this.mailer.sendMail({
+            from: this.config.getSmtpFrom(),
+            to: this.config.getSmtpTo(),
+            subject: `Storage Analytics Notification`,
+            html: `The notification service has been started`,
+        });
     }
 
     private getPoolMap = async (): Promise<Record<string, string>> => {
