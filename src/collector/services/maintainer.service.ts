@@ -3,7 +3,6 @@ import { HttpService } from '@nestjs/axios';
 import { readFileSync } from 'fs';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { lastValueFrom } from 'rxjs';
-import { PeriodType } from '../enums/period-type.enum';
 
 @Injectable()
 export class MaintainerService {
@@ -88,24 +87,19 @@ export class MaintainerService {
 
     public async getSLAEvents(
         systemId: string,
-        period: PeriodType
-    ): Promise<{ [poolName: string]: { duration: number; events: number } }> {
-        // const maintainerUrl = this.maintainerMap[systemId];
-        const durations = await this.getLastMaintainerData(
-            systemId,
-            `OUT_OF_SLA_TIME_${period}`
-        );
+        from?: number,
+        to?: number
+    ): Promise<{ [pool: string]: { count: number; duration: number } }> {
+        const maintainerUrl = this.maintainerMap[systemId];
 
-        const result = {};
-
-        for (const key in durations.cols) {
-            result[key] = {
-                duration: durations.cols[key],
-                events: 1,
-            };
-        }
-
-        return result;
+        return (
+            await lastValueFrom(
+                this.httpService.post(`${maintainerUrl}features/sla`, {
+                    from,
+                    to,
+                })
+            )
+        ).data;
     }
 
     public async getMetricsForEntities(

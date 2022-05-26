@@ -184,23 +184,37 @@ export class DataCenterService {
                         }
                     );
                 } else {
-                    // TODO: WIP
-                    const duration =
-                        await this.maintainerService.getLastMaintainerData(
-                            system.name,
-                            `OUT_OF_SLA_TIME_${period}`
-                        );
+                    const now = new Date().getTime();
+                    const days =
+                        period === 'MONTH' ? 30 : period === 'WEEK' ? 7 : 1;
+                    const sla = await this.maintainerService.getSLAEvents(
+                        system.name,
+                        now - days * 24 * 60 * 60_000,
+                        now
+                    );
 
                     system.children.forEach((c) => {
                         c.metrics = [
                             {
                                 id: -1,
-                                date: duration.date,
-                                value: (duration.cols[c.name] ?? 0) * 60,
+                                date: new Date(),
+                                value: (sla[c.name]?.duration ?? 0) * 60,
                                 metricTypeEntity: {
                                     id: -1,
                                     name: 'OUT_OF_SLA_TIME',
                                     unit: 'm',
+                                    idCatMetricGroup: -1,
+                                    threshold: undefined,
+                                },
+                            },
+                            {
+                                id: -1,
+                                date: new Date(),
+                                value: sla[c.name]?.count ?? 0,
+                                metricTypeEntity: {
+                                    id: -1,
+                                    name: 'SLA_EVENTS',
+                                    unit: '',
                                     idCatMetricGroup: -1,
                                     threshold: undefined,
                                 },
