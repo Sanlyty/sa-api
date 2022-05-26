@@ -593,8 +593,7 @@ export class DataCenterService {
                                     peak: Math.round(10 * row.peak) / 10,
                                     startTime: row.from,
                                     endTime: row.to,
-                                    date: ((row.from + row.to) /
-                                        2) as unknown as Date,
+                                    date: new Date((row.from + row.to) / 2),
                                     metricTypeEntity: {
                                         id: -1,
                                         unit: '%',

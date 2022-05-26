@@ -71,7 +71,7 @@ export class NotificationService {
         return poolMap;
     };
 
-    @Cron('0 0 */2 * * *')
+    @Cron('0 */10 * * * *')
     public async parityGroupAlert() {
         const reported: {
             system: string;
@@ -93,13 +93,17 @@ export class NotificationService {
             );
 
             events.forEach((e) => {
+                const pool = poolMap[`${system}:${e.key}`];
+
+                if (!pool) return;
+
                 reported.push({
                     system,
                     len: (e.to - e.from) / 60_000,
                     when: new Date((e.to + e.from) / 2),
                     perc: e.average,
                     pg: `PG ${e.key}`,
-                    pool: poolMap[`${system}:${e.key}`] ?? '?',
+                    pool,
                 });
             });
         }
@@ -127,7 +131,7 @@ export class NotificationService {
                                 e.pool
                             }</b></li>`
                     )
-                    .join()}</ul>`,
+                    .join('')}</ul>`,
             });
         }
 
