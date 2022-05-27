@@ -133,9 +133,6 @@ export class MaintainerService {
                 }
             }
 
-            console.log(metric.id);
-            console.log(data);
-
             metricData[metric.id] = {
                 data,
                 unit: metric.unit,
