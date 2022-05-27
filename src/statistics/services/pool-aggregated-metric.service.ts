@@ -18,14 +18,14 @@ export class PoolAggregatedMetricService extends AggregatedMetricService {
         super(dcService, typeService);
     }
 
-    fetchMetricsOnly(entities: StorageEntityEntity[]): MetricEntityInterface[] {
-        const result = [];
-        entities.forEach((dataCenter) =>
-            dataCenter.children.forEach((system) =>
-                system.children.forEach((pool) => result.push(pool.metrics))
+    fetchMetricsOnly(
+        entities: StorageEntityEntity[]
+    ): MetricEntityInterface[][] {
+        return entities.flatMap((dataCenter) =>
+            dataCenter.children.flatMap((system) =>
+                system.children.map((pool) => pool.metrics)
             )
         );
-        return result;
     }
 
     getData(

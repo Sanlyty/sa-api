@@ -50,7 +50,7 @@ export abstract class AggregatedMetricService {
 
     abstract fetchMetricsOnly(
         entities: StorageEntityEntity[]
-    ): MetricEntityInterface[];
+    ): MetricEntityInterface[][];
 
     public async fetchAggregatedMetricsGrouped(
         types: MetricType[],
@@ -83,7 +83,7 @@ export abstract class AggregatedMetricService {
             types.map(async (type) => {
                 const config = this.getStrategy(type);
                 const aggValue = config.algorithm.aggregate(
-                    metrics as unknown as MetricEntityInterface[][],
+                    metrics,
                     type,
                     config.options
                 );

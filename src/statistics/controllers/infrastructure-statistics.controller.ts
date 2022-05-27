@@ -39,20 +39,23 @@ export class InfrastructureStatisticsController {
 
     @Get('alerts')
     public async getInfrastructureAlerts() {
-        const perfMetrics = await this.systemAggregatedMetricService.fetchAggregatedMetricsGrouped(
-            [MetricType.WORKLOAD, MetricType.TRANSFER],
-            [Region.AMERICA, Region.EUROPE, Region.ASIA]
-        );
-        const capMetrics = await this.poolAggregatedMetricService.fetchAggregatedMetricsGrouped(
-            [
-                MetricType.LOGICAL_CAPACITY,
-                MetricType.SUBSCRIBED_CAPACITY,
-                MetricType.TOTAL_SAVING_EFFECT,
-                MetricType.CHANGE_MONTH,
-                MetricType.PHYSICAL_CAPACITY,
-            ],
-            [Region.AMERICA, Region.EUROPE, Region.ASIA]
-        );
+        const perfMetrics =
+            await this.systemAggregatedMetricService.fetchAggregatedMetricsGrouped(
+                [MetricType.WORKLOAD, MetricType.TRANSFER],
+                [Region.AMERICA, Region.EUROPE, Region.ASIA]
+            );
+
+        const capMetrics =
+            await this.poolAggregatedMetricService.fetchAggregatedMetricsGrouped(
+                [
+                    MetricType.LOGICAL_CAPACITY,
+                    MetricType.SUBSCRIBED_CAPACITY,
+                    MetricType.TOTAL_SAVING_EFFECT,
+                    MetricType.CHANGE_MONTH,
+                    MetricType.PHYSICAL_CAPACITY,
+                ],
+                [Region.AMERICA, Region.EUROPE, Region.ASIA]
+            );
         return InfraStatisticsTransformer.transform(
             this.dataCenterService.getAlerts(),
             this.mergeRegionMetrics(perfMetrics, capMetrics, [

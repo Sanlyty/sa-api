@@ -3,6 +3,7 @@ import { HttpService } from '@nestjs/axios';
 import { readFileSync } from 'fs';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { lastValueFrom } from 'rxjs';
+import { MetricType } from '../enums/metric-type.enum';
 
 @Injectable()
 export class MaintainerService {
@@ -112,13 +113,14 @@ export class MaintainerService {
                 id: string;
                 metric?: string;
                 unit: string;
+                type: MetricType;
                 preproc?: (val: number) => number;
             }[];
         }
     ) {
         const metricData: Record<
             string,
-            { data: LastMaintainerData; unit: string }
+            { data: LastMaintainerData; unit: string; type: MetricType }
         > = {};
 
         for (const metric of options.metrics) {
@@ -136,6 +138,7 @@ export class MaintainerService {
             metricData[metric.id] = {
                 data,
                 unit: metric.unit,
+                type: metric.type,
             };
         }
 
@@ -147,7 +150,7 @@ export class MaintainerService {
                 const result = {
                     id: -1,
                     metricTypeEntity: {
-                        id: -1,
+                        id: mData.type,
                         name: metricId,
                         unit: mData.unit,
                         threshold: undefined,
