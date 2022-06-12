@@ -41,6 +41,7 @@ import { StorageEntityDetailsEntity } from './entities/storage-entity-details.en
 import { ParityGroupMetricEntity } from './entities/parity-group-metric.entity';
 import { PgMultiValueMetricCollectorService } from './services/collect/pg-multi-value-metric-collector.service';
 import { MaintainerService } from './services/maintainer.service';
+import { CompatibilityController } from './controllers/compat.controller';
 
 @Module({
     imports: [
@@ -95,6 +96,7 @@ import { MaintainerService } from './services/maintainer.service';
         MetricController,
         ExternalController,
         StorageEntityController,
+        CompatibilityController,
     ],
     exports: [
         DataCenterService,

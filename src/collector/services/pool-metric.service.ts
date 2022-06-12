@@ -5,8 +5,6 @@ import { PoolMetricEntity } from '../entities/pool-metric.entity';
 import { MetricTypeService } from './metric-type.service';
 import { MetricType } from '../enums/metric-type.enum';
 import { PoolMetricReadEntity } from '../entities/pool-metric-read.entity';
-import { MetricEntityInterface } from '../entities/metric-entity.interface';
-import { SystemMetricReadEntity } from '../entities/system-metric-read.entity';
 import { StorageEntityStatus } from '../enums/storage-entity-status.enum';
 
 @Injectable()
@@ -55,17 +53,5 @@ export class PoolMetricService {
             .groupBy('metrics.date')
             .orderBy('metrics.date')
             .getRawMany();
-    }
-
-    private static aggregateMetric(
-        metrics: PoolMetricReadEntity[]
-    ): MetricEntityInterface {
-        const data = metrics;
-        const result = new SystemMetricReadEntity();
-        result.value = data.reduce(
-            (accumulator, currentValue) => accumulator + currentValue.value,
-            0
-        );
-        return result;
     }
 }

@@ -176,7 +176,7 @@ export class MaintainerService {
     public async getMaintainerData(
         id: string,
         metric: string,
-        duration: number,
+        durationOrRange: number | [Date, Date],
         options?: {
             variants?: string[];
         }
@@ -200,7 +200,15 @@ export class MaintainerService {
             };
         }
 
-        const lastDate = dataranges.reverse()[0][1];
+        let range;
+
+        if (Array.isArray(durationOrRange)) {
+            range = durationOrRange.map((d) => Math.round(Number(d) / 60_000));
+        } else {
+            const lastDate = dataranges.reverse()[0][1];
+
+            range = [lastDate - durationOrRange, lastDate];
+        }
 
         const variants =
             options?.variants ??
@@ -210,8 +218,8 @@ export class MaintainerService {
                         `${maintainerUrl}features/variant_recommend`,
                         {
                             id: metric,
-                            from: (lastDate - duration).toString(),
-                            to: lastDate.toString(),
+                            from: range[0].toString(),
+                            to: range[1].toString(),
                         }
                     )
                 )
@@ -223,8 +231,8 @@ export class MaintainerService {
                     `${maintainerUrl}bulkload_json/${metric}`,
                     {
                         variants,
-                        from: (lastDate - duration).toString(),
-                        to: lastDate.toString(),
+                        from: range[0].toString(),
+                        to: range[1].toString(),
                     }
                 )
             )
