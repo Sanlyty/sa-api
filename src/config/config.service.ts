@@ -31,8 +31,11 @@ export class ConfigService {
 
     getSmtpSettings() {
         const cfg = this.envConfig;
+
+        if (!cfg.smtp_host) return undefined;
+
         const [host, port] = cfg.smtp_host.split(':');
-        const [user, pass] = cfg.smtp_auth.split(':');
+        const [user, pass] = (cfg.smtp_auth ?? '').split(':');
 
         return {
             host,

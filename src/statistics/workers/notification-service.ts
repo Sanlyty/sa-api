@@ -11,7 +11,7 @@ import { StorageEntityStatus } from '../../collector/enums/storage-entity-status
 // TODO: choose a better persistance method
 @Injectable()
 export class NotificationService {
-    private mailer: Transporter;
+    private mailer: Transporter | undefined;
     private lastChecked: number;
 
     constructor(
@@ -19,20 +19,31 @@ export class NotificationService {
         private maintainerService: MaintainerService,
         private entityRepo: StorageEntityRepository
     ) {
-        this.mailer = createTransport({
-            ...config.getSmtpSettings(),
-        });
-
         if (existsSync('last_notify'))
             this.lastChecked = Number(readFileSync('last_notify'));
 
-        this.mailer.sendMail({
-            from: this.config.getSmtpFrom(),
-            to: this.config.getSmtpTo(),
-            subject: `Storage Analytics Notification`,
-            html: `The notification service has been started`,
-        });
+        if (this.trySetMailer()) {
+            this.mailer.sendMail({
+                from: this.config.getSmtpFrom(),
+                to: this.config.getSmtpTo(),
+                subject: `Storage Analytics Notification`,
+                html: `The notification service has been started`,
+            });
+        }
     }
+
+    private trySetMailer = () => {
+        if (this.mailer) return true;
+
+        const settings = this.config.getSmtpSettings();
+
+        if (settings) {
+            this.mailer = createTransport(settings);
+            return true;
+        }
+
+        return false;
+    };
 
     private getPoolMap = async (): Promise<Record<string, string>> => {
         const systems = (
@@ -73,6 +84,8 @@ export class NotificationService {
 
     @Cron('0 */10 * * * *')
     public async parityGroupAlert() {
+        if (!this.trySetMailer()) return;
+
         const reported: {
             system: string;
             pg: string;
