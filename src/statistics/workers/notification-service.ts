@@ -23,12 +23,16 @@ export class NotificationService {
             this.lastChecked = Number(readFileSync('last_notify'));
 
         if (this.trySetMailer()) {
-            this.mailer.sendMail({
-                from: this.config.getSmtpFrom(),
-                to: this.config.getSmtpTo(),
-                subject: `Storage Analytics Notification`,
-                html: `The notification service has been started`,
-            });
+            this.mailer
+                .sendMail({
+                    from: this.config.getSmtpFrom(),
+                    to: this.config.getSmtpTo(),
+                    subject: `Storage Analytics Notification`,
+                    html: `The notification service has been started`,
+                })
+                .catch((e) => {
+                    console.error(e);
+                });
         }
     }
 
@@ -129,23 +133,28 @@ export class NotificationService {
                     ? systems.values().next().value
                     : 'multiple systems';
 
-            await this.mailer.sendMail({
-                from: this.config.getSmtpFrom(),
-                to: this.config.getSmtpTo(),
-                subject: `Storage Analytics Warning - ${systemsText} - Parity Group Utilization Alert`,
-                html: `<ul>${reported
-                    .map(
-                        (e) =>
-                            `<li>${e.system} ==> <b>${e.perc.toFixed(
-                                1
-                            )}[%]</b> util of ${e.pg} ==> <b>${
-                                e.len
-                            } minutes</b> over threshold (${e.when.toString()}). Affected StoragePool: <b>${
-                                e.pool
-                            }</b></li>`
-                    )
-                    .join('')}</ul>`,
-            });
+            try {
+                await this.mailer.sendMail({
+                    from: this.config.getSmtpFrom(),
+                    to: this.config.getSmtpTo(),
+                    subject: `Storage Analytics Warning - ${systemsText} - Parity Group Utilization Alert`,
+                    html: `<ul>${reported
+                        .map(
+                            (e) =>
+                                `<li>${e.system} ==> <b>${e.perc.toFixed(
+                                    1
+                                )}[%]</b> util of ${e.pg} ==> <b>${
+                                    e.len
+                                } minutes</b> over threshold (${e.when.toString()}). Affected StoragePool: <b>${
+                                    e.pool
+                                }</b></li>`
+                        )
+                        .join('')}</ul>`,
+                });
+            } catch (e) {
+                console.error(e);
+                return;
+            }
         }
 
         this.lastChecked = now;
