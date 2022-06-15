@@ -30,9 +30,9 @@ export class NotificationService {
                     subject: `Storage Analytics Notification`,
                     html: `The notification service has been started`,
                 })
-                .catch((e) => {
-                    console.error(e);
-                });
+                .catch(console.error);
+
+            this.parityGroupAlert().catch(console.error);
         }
     }
 
@@ -94,7 +94,8 @@ export class NotificationService {
             system: string;
             pg: string;
             pool: string;
-            perc: number;
+            average: number;
+            peak: number;
             len: number;
             when: Date;
         }[] = [];
@@ -105,7 +106,8 @@ export class NotificationService {
         for (const system of this.maintainerService.getHandledSystems()) {
             const events = await this.maintainerService.getPGEvents(
                 system,
-                Math.max(now - 36 * 60 * 60_000, this.lastChecked),
+                // FIXME: factor of 30
+                Math.max(now - 30 * 36 * 60 * 60_000, this.lastChecked),
                 now
             );
 
@@ -118,7 +120,8 @@ export class NotificationService {
                     system,
                     len: (e.to - e.from) / 60_000,
                     when: new Date((e.to + e.from) / 2),
-                    perc: e.average,
+                    average: e.average,
+                    peak: e.peak,
                     pg: `PG ${e.key}`,
                     pool,
                 });
@@ -126,34 +129,79 @@ export class NotificationService {
         }
 
         if (reported.length > 0) {
-            const systems: Set<string> = new Set(reported.map((r) => r.system));
+            const systemMap: Record<string, typeof reported> = {};
+            reported.forEach((r) => {
+                if (!(r.system in systemMap)) {
+                    systemMap[r.system] = [];
+                }
 
-            const systemsText =
-                systems.size === 1
-                    ? systems.values().next().value
-                    : 'multiple systems';
+                systemMap[r.system].push(r);
+            });
+
+            const systems = Object.keys(systemMap);
+            const subject = `Storage Analytics Warning - ${
+                systems.length === 1 ? systems[0] : 'multiple systems'
+            } - Parity Group Utilization Alert`;
+            let html = '';
+
+            for (const system in systemMap) {
+                html += `<h1>${system}</h1>`;
+                html += '<table>';
+                html += `<tr><th>Parity Group</th><th>Pool Name</th><th>Utilization/Peak [%]</th><th>Date</th><th>Duration [min]</th></tr>`;
+                for (const row of systemMap[system]) {
+                    html += `<tr><td>${row.pg}</td><td>${
+                        row.pool
+                    }</td><td style="text-align:center">${row.average.toFixed(
+                        1
+                    )}/${row.peak.toFixed(
+                        1
+                    )}</td><td>${row.when.toDateString()}</td><td style="text-align:center">${
+                        row.len
+                    }</td></tr>`;
+                }
+                html += '</table>';
+            }
 
             try {
                 await this.mailer.sendMail({
                     from: this.config.getSmtpFrom(),
                     to: this.config.getSmtpTo(),
-                    subject: `Storage Analytics Warning - ${systemsText} - Parity Group Utilization Alert`,
-                    html: `<ul>${reported
-                        .map(
-                            (e) =>
-                                `<li>${e.system} ==> <b>${e.perc.toFixed(
-                                    1
-                                )}[%]</b> util of ${e.pg} ==> <b>${
-                                    e.len
-                                } minutes</b> over threshold (${e.when.toString()}). Affected StoragePool: <b>${
-                                    e.pool
-                                }</b></li>`
-                        )
-                        .join('')}</ul>`,
+                    subject,
+                    html,
                 });
             } catch (e) {
                 console.error(e);
                 return;
+            }
+
+            const plain = this.config.getSmtpPlainTo();
+
+            if (plain) {
+                try {
+                    await this.mailer.sendMail({
+                        from: this.config.getSmtpFrom(),
+                        to: plain,
+                        subject,
+                        text: reported
+                            .map(
+                                (r) =>
+                                    `System=${r.system}, PG=${
+                                        r.pg
+                                    }, Pool Name=${
+                                        r.pool
+                                    }, Utilization=${r.average.toFixed(
+                                        1
+                                    )}, Date=${r.when.toDateString()}, Duration=${
+                                        r.len
+                                    }`
+                            )
+                            .join('\r\n')
+                            .trimEnd(),
+                    });
+                } catch (e) {
+                    console.error(e);
+                    return;
+                }
             }
         }
 

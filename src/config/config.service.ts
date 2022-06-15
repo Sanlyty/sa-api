@@ -51,7 +51,11 @@ export class ConfigService {
         return this.envConfig.smtp_from;
     }
 
-    getSmtpTo(): string[] {
+    getSmtpTo(): string[] | undefined {
         return this.envConfig.smtp_to?.split(',');
+    }
+
+    getSmtpPlainTo(): string[] | undefined {
+        return this.envConfig.smtp_plain_to?.split(',');
     }
 }
