@@ -129,6 +129,7 @@ export class NotificationService {
         }
 
         if (reported.length > 0) {
+            // Fancy email version
             const systemMap: Record<string, typeof reported> = {};
             reported.forEach((r) => {
                 if (!(r.system in systemMap)) {
@@ -174,6 +175,7 @@ export class NotificationService {
                 return;
             }
 
+            // Plain version
             const plain = this.config.getSmtpPlainTo();
 
             if (plain) {

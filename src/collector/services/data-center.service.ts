@@ -34,7 +34,7 @@ export const enum MetricGroup {
 const regionDataCenters = {
     [Region.EUROPE]: ['CZ_Chodov', 'CZ_Sitel'],
     [Region.ASIA]: ['MY_AIMS', 'MY_Cyberjaya'],
-    [Region.AMERICA]: ['US_Ashburn', 'US_Mechanicsburg'],
+    [Region.AMERICA]: ['US_Ashburn', 'US_Mechanicsburg'], // , 'US_CVG'
 };
 
 @Injectable()
