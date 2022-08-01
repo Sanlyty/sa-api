@@ -1,0 +1,285 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+model BlockSizeLatency {
+  id_metric          Int              @id @default(autoincrement())
+  id_cat_metric_type Int
+  id_storage_entity  Int
+  id_cat_operation   Int
+  block_size         Float
+  latency            Float
+  value              Int
+  date               DateTime         @db.Date
+  created_at         DateTime?        @default(now()) @db.Timestamp(6)
+  cat_metric_type    CatMetricType  @relation(fields: [id_cat_metric_type], references: [id_cat_metric_type], onDelete: NoAction, onUpdate: NoAction)
+  cat_operation      CatOperation    @relation(fields: [id_cat_operation], references: [id_cat_operation], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities   StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("block_size_latency")
+}
+
+model CatComponentStatus {
+  id_cat_component_status Int                @id @db.SmallInt
+  name                    String             @db.VarChar(15)
+  storage_entities        StorageEntities[]
+
+  @@map("cat_component_status")
+}
+
+model CatExternalType {
+  id_cat_external_type Int         @id @default(autoincrement())
+  name                 String?     @db.VarChar(20)
+  externals            Externals[]
+
+  @@map("cat_external_type")
+}
+
+model CatMetricGroup {
+  id_cat_metric_group Int               @id @default(autoincrement())
+  name                String            @db.VarChar(30)
+  cat_metric_type     CatMetricType[]
+
+  @@map("cat_metric_group")
+}
+
+model CatMetricType {
+  id_cat_metric_type   Int                    @id @default(autoincrement()) @db.SmallInt
+  name                 String                 @db.VarChar(30)
+  unit                 String?                @db.VarChar(10)
+  id_cat_metric_group  Int
+  cat_metric_group     CatMetricGroup       @relation(fields: [id_cat_metric_group], references: [id_cat_metric_group], onDelete: NoAction, onUpdate: NoAction)
+  block_size_latency   BlockSizeLatency[]
+  cha_metrics          ChaMetrics[]
+  host_group_metrics   HostGroupMetrics[]
+  metric_thresholds    MetricThresholds[]
+  parity_group_metrics ParityGroupMetrics[]
+  pool_metrics         PoolMetrics[]
+  port_metrics         PortMetrics[]
+  system_metrics       SystemMetrics[]
+
+  @@map("cat_metric_type")
+}
+
+model CatOperation {
+  id_cat_operation   Int                  @id @default(autoincrement())
+  name               String?              @db.VarChar(10)
+  block_size_latency BlockSizeLatency[]
+
+  @@map("cat_operation")
+}
+
+model CatStorageEntityType {
+  id_cat_storage_entity_type Int                @id @db.SmallInt
+  name                       String?            @db.VarChar(20)
+  storage_entities           StorageEntities[]
+
+  @@map("cat_storage_entity_type")
+}
+
+model ChaMetrics {
+  id_metric          Int              @id @default(autoincrement())
+  id_cat_metric_type Int              @db.SmallInt
+  id_storage_entity  Int
+  value              Float?
+  date               DateTime         @db.Date
+  created_at         DateTime?        @default(now()) @db.Timestamp(6)
+  cat_metric_type    CatMetricType  @relation(fields: [id_cat_metric_type], references: [id_cat_metric_type], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities   StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_storage_entity, id_cat_metric_type, date(sort: Desc)], map: "idx_cha_metrics_date")
+  @@index([id_storage_entity, id_cat_metric_type, id_metric], map: "idx_cha_metrics_id_cha_metric_type")
+  @@map("cha_metrics")
+}
+
+model Externals {
+  id_external          Int                @id @default(autoincrement())
+  id_cat_external_type Int?
+  value                String?            @db.VarChar(50)
+  id_storage_entity    Int?
+  cat_external_type    CatExternalType? @relation(fields: [id_cat_external_type], references: [id_cat_external_type], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities     StorageEntities?  @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("externals")
+}
+
+model HostGroupMetrics {
+  id_metric          Int              @id @default(autoincrement())
+  id_cat_metric_type Int              @db.SmallInt
+  id_storage_entity  Int
+  value              Float?
+  date               DateTime         @db.Date
+  created_at         DateTime?        @default(now()) @db.Timestamp(6)
+  cat_metric_type    CatMetricType  @relation(fields: [id_cat_metric_type], references: [id_cat_metric_type], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities   StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_storage_entity, id_cat_metric_type, date(sort: Desc)], map: "idx_host_group_metrics_date")
+  @@index([id_storage_entity, id_cat_metric_type, id_metric], map: "idx_host_group_metrics_id_cha_metric_type")
+  @@map("host_group_metrics")
+}
+
+model MetricThresholds {
+  id_metric_threshold Int              @id @default(autoincrement())
+  id_cat_metric_type  Int?             @db.SmallInt
+  min_value           Float?
+  max_value           Float?
+  cat_metric_type     CatMetricType? @relation(fields: [id_cat_metric_type], references: [id_cat_metric_type], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("metric_thresholds")
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model ParityGroupMetrics {
+  id_metric          Int               @id @default(autoincrement())
+  id_cat_metric_type Int?              @db.SmallInt
+  value              Float?
+  peak               Float?
+  id_storage_entity  Int?
+  start_time         DateTime?         @db.Timestamp(6)
+  end_time           DateTime?         @db.Timestamp(6)
+  cat_metric_type    CatMetricType?  @relation(fields: [id_cat_metric_type], references: [id_cat_metric_type], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities   StorageEntities? @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("parity_group_metrics")
+}
+
+model PoolMetrics {
+  id_metric          Int              @id @default(autoincrement())
+  id_cat_metric_type Int              @db.SmallInt
+  id_storage_entity  Int
+  value              Float?
+  date               DateTime         @db.Date
+  created_at         DateTime?        @default(now()) @db.Timestamp(6)
+  cat_metric_type    CatMetricType  @relation(fields: [id_cat_metric_type], references: [id_cat_metric_type], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities   StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_storage_entity, id_cat_metric_type, date(sort: Desc)], map: "idx_pool_metrics_date")
+  @@index([id_storage_entity, id_cat_metric_type, id_metric], map: "idx_pool_metrics_id_pool_metric_type")
+  @@map("pool_metrics")
+}
+
+model PortMetrics {
+  id_metric          Int              @id @default(autoincrement())
+  id_cat_metric_type Int              @db.SmallInt
+  id_storage_entity  Int
+  value              Float?
+  date               DateTime         @db.Date
+  created_at         DateTime?        @default(now()) @db.Timestamp(6)
+  cat_metric_type    CatMetricType  @relation(fields: [id_cat_metric_type], references: [id_cat_metric_type], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities   StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_storage_entity, id_cat_metric_type, date(sort: Desc)], map: "idx_port_metrics_date")
+  @@index([id_storage_entity, id_cat_metric_type, id_metric], map: "idx_port_metrics_id_metric_type")
+  @@map("port_metrics")
+}
+
+model StorageEntities {
+  id                                                                                Int                        @id @default(autoincrement())
+  name                                                                              String?                    @db.VarChar(100)
+  serial_number                                                                     String?                    @db.VarChar(30)
+  parentId                                                                          Int?
+  id_cat_storage_entity_status                                                      Int                        @default(1) @db.SmallInt
+  id_cat_storage_entity_type                                                        Int                        @db.SmallInt
+  created_at                                                                        DateTime?                  @default(now()) @db.Timestamp(6)
+  cat_component_status                                                              CatComponentStatus       @relation(fields: [id_cat_storage_entity_status], references: [id_cat_component_status], onDelete: NoAction, onUpdate: NoAction)
+  cat_storage_entity_type                                                           CatStorageEntityType    @relation(fields: [id_cat_storage_entity_type], references: [id_cat_storage_entity_type], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities                                                                  StorageEntities?          @relation("storage_entitiesTostorage_entities", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  block_size_latency                                                                BlockSizeLatency[]
+  cha_metrics                                                                       ChaMetrics[]
+  externals                                                                         Externals[]
+  host_group_metrics                                                                HostGroupMetrics[]
+  parity_group_metrics                                                              ParityGroupMetrics[]
+  pool_metrics                                                                      PoolMetrics[]
+  port_metrics                                                                      PortMetrics[]
+  other_storage_entities                                                            StorageEntities[]         @relation("storage_entitiesTostorage_entities")
+  storage_entities_closure_storage_entitiesTostorage_entities_closure_id_ancestor   StorageEntitiesClosure[] @relation("storage_entitiesTostorage_entities_closure_id_ancestor")
+  storage_entities_closure_storage_entitiesTostorage_entities_closure_id_descendant StorageEntitiesClosure[] @relation("storage_entitiesTostorage_entities_closure_id_descendant")
+  storage_entity_details                                                            StorageEntityDetails?
+  system_metrics                                                                    SystemMetrics[]
+
+  @@map("storage_entities")
+}
+
+model StorageEntitiesClosure {
+  id_ancestor                                                               Int
+  id_descendant                                                             Int
+  storage_entities_storage_entitiesTostorage_entities_closure_id_ancestor   StorageEntities @relation("storage_entitiesTostorage_entities_closure_id_ancestor", fields: [id_ancestor], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities_storage_entitiesTostorage_entities_closure_id_descendant StorageEntities @relation("storage_entitiesTostorage_entities_closure_id_descendant", fields: [id_descendant], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([id_ancestor, id_descendant])
+  @@map("storage_entities_closure")
+}
+
+model StorageEntityDetails {
+  id_storage_entity   Int              @id(map: "system_details_pkey") @unique(map: "ix_id_storage_entity")
+  model               String?          @db.VarChar(15)
+  prefix_reference_id String?          @db.VarChar(10)
+  dkc                 String?          @db.VarChar(30)
+  management_ip       String?          @db.VarChar(20)
+  rack                String?          @db.VarChar(32)
+  room                String?          @db.VarChar(32)
+  sort_id             Int?             @db.SmallInt
+  speed               Int?
+  note                String?          @db.VarChar(255)
+  cables              String?          @db.VarChar(50)
+  switch              String?          @db.VarChar(30)
+  slot                String?          @db.VarChar(30)
+  wwn                 String?          @db.VarChar(100)
+  storage_entities    StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "system_details_id_storage_entity_fkey")
+
+  @@map("storage_entity_details")
+}
+
+model SystemMetrics {
+  id_metric          Int              @id @default(autoincrement())
+  id_cat_metric_type Int              @db.SmallInt
+  value              Float?
+  peak               Float?
+  id_storage_entity  Int
+  date               DateTime         @db.Date
+  created_at         DateTime?        @default(now()) @db.Timestamp(6)
+  cat_metric_type    CatMetricType  @relation(fields: [id_cat_metric_type], references: [id_cat_metric_type], onDelete: NoAction, onUpdate: NoAction)
+  storage_entities   StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([id_storage_entity, id_cat_metric_type, date(sort: Desc)], map: "idx_system_metrics_date")
+  @@index([id_storage_entity, id_cat_metric_type, id_metric], map: "idx_system_metrics_id_cat_metric_type")
+  @@map("system_metrics")
+}
+
+model TimeSeries {
+  id      Int @id @default(autoincrement())
+  variant String
+  x       Float 
+  y       Float
+
+  @@unique([variant, x])
+}
+
+model migration_schema {
+  id        Int    @id(map: "PK_bb30f6fc0e64e58714313844dc3") @default(autoincrement())
+  timestamp BigInt
+  name      String @db.VarChar
+}
+
+model migrations {
+  id        Int    @id(map: "PK_8c82d7f526340ab734260ea46be") @default(autoincrement())
+  timestamp BigInt
+  name      String @db.VarChar
+}
+
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by the Prisma Client.
+model typeorm_metadata {
+  type     String  @db.VarChar
+  database String? @db.VarChar
+  schema   String? @db.VarChar
+  table    String? @db.VarChar
+  name     String? @db.VarChar
+  value    String?
+
+  @@ignore
+}
