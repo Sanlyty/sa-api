@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { MetricType } from 'src/collector/enums/metric-type.enum';
-import { MaintainerService } from 'src/collector/services/maintainer.service';
+import { MetricType } from '../../collector/enums/metric-type.enum';
+import { MaintainerService } from '../../collector/services/maintainer.service';
 import prisma from '../../prisma';
 import { GraphDataService, ServiceType } from '../services/graph-data.service';
 import { TypeMappingUtils } from '../utils/type-mapping.utils';
