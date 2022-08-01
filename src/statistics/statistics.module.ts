@@ -15,6 +15,7 @@ import { NotificationService } from './workers/notification-service';
 import { ConfigModule } from '../config/config.module';
 import { StorageEntityRepository } from '../collector/repositories/storage-entity.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { TimeSeriesService } from './workers/time-series-service';
 
 @Module({
     controllers: [
@@ -31,6 +32,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
         LatencyBlockSizeService,
         MaterializedViewRefresher,
         NotificationService,
+        TimeSeriesService,
         DatabaseAdminitrationService,
     ],
     imports: [

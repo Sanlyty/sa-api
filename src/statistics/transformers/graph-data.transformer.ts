@@ -4,11 +4,8 @@ import { GraphSerie } from '../models/dtos/graph-serie.dto';
 import { TypeMappingUtils } from '../utils/type-mapping.utils';
 
 export class GraphDataTransformer {
-    static async transform(
-        dataPromise: Promise<{ type: MetricType; data: unknown[] }[]>
-    ) {
+    static transform(data: { type: MetricType; data: unknown[] }[]) {
         const resultDto = new GraphDataDto();
-        const data = await dataPromise;
 
         resultDto.data = data.map(
             (serie) =>

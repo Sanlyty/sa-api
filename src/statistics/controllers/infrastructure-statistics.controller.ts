@@ -1,17 +1,15 @@
 import { Controller, Get, Query } from '@nestjs/common';
 import { CapacityStatisticsService } from '../../collector/services/capacity-statistics.service';
 import { DataCenterStatisticsService } from '../services/data-center-statistics.service';
-import { GraphDataService, ServiceType } from '../services/graph-data.service';
+import { GraphDataService } from '../services/graph-data.service';
 import { MetricType } from '../../collector/enums/metric-type.enum';
-import { GraphDataParams } from './params/graph-data.params';
-import { GraphFilterPipe } from './pipes/graph-filter.pipe';
-import { GraphDataTransformer } from '../transformers/graph-data.transformer';
 import { Region } from '../models/dtos/region.enum';
 import { InfraStatisticsTransformer } from '../transformers/infra-statistics.transformer';
 import { PoolAggregatedMetricService } from '../services/pool-aggregated-metric.service';
 import { SystemAggregatedMetricService } from '../services/system-aggregated-metric.service';
 import { RegionMetricInterface } from '../services/aggregated-metric.service';
 import { StorageEntityMetricTransformer } from '../transformers/storage-entity-metric.transformer';
+import prisma from 'src/prisma';
 
 @Controller('api/v1/infrastructure')
 export class InfrastructureStatisticsController {
@@ -67,21 +65,31 @@ export class InfrastructureStatisticsController {
     }
 
     @Get('performance/graph')
-    public getPerformanceGraphData(
-        @Query(new GraphFilterPipe()) graphFilter: GraphDataParams
-    ) {
-        return GraphDataTransformer.transform(
-            this.graphDataService.getGraphData(graphFilter, ServiceType.SYSTEM)
-        );
+    public async getPerformanceGraphData(@Query('types') types: string[]) {
+        const result = [];
+
+        for (const type of types) {
+            const data = await prisma.timeSeries.findMany({
+                select: { x: true, y: true },
+                where: { variant: type },
+                orderBy: { x: 'asc' },
+            });
+
+            result.push({
+                type,
+                data: data.map(({ x, y }) => ({
+                    x: x.toISOString(),
+                    y: Math.round(y * 100) / 100,
+                })),
+            });
+        }
+
+        return { data: result };
     }
 
     @Get('capacity/graph')
-    public getCapacityGraphData(
-        @Query(new GraphFilterPipe()) graphFilter: GraphDataParams
-    ) {
-        return GraphDataTransformer.transform(
-            this.graphDataService.getGraphData(graphFilter, ServiceType.POOL)
-        );
+    public getCapacityGraphData(@Query('types') types: string[]) {
+        return this.getPerformanceGraphData(types);
     }
 
     mergeRegionMetrics(

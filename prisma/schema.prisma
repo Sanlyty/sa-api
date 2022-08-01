@@ -253,7 +253,7 @@ model SystemMetrics {
 model TimeSeries {
   id      Int @id @default(autoincrement())
   variant String
-  x       Float 
+  x       DateTime 
   y       Float
 
   @@unique([variant, x])
