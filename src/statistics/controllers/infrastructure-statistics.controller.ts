@@ -9,7 +9,7 @@ import { PoolAggregatedMetricService } from '../services/pool-aggregated-metric.
 import { SystemAggregatedMetricService } from '../services/system-aggregated-metric.service';
 import { RegionMetricInterface } from '../services/aggregated-metric.service';
 import { StorageEntityMetricTransformer } from '../transformers/storage-entity-metric.transformer';
-import prisma from 'src/prisma';
+import prisma from '../../prisma';
 
 @Controller('api/v1/infrastructure')
 export class InfrastructureStatisticsController {
