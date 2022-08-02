@@ -111,7 +111,6 @@ export class TimeSeriesService {
                             [new Date(date), addDays(date, 1)]
                         );
 
-                    console.log(response);
                     if (response.data.length === 0) continue day;
 
                     if (variant === 'WORKLOAD' || variant === 'TRANSFER') {

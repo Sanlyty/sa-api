@@ -106,8 +106,8 @@ export class NotificationService {
         for (const system of this.maintainerService.getHandledSystems()) {
             const events = await this.maintainerService.getPGEvents(
                 system,
-                // FIXME: factor of 30
-                Math.max(now - 30 * 36 * 60 * 60_000, this.lastChecked),
+                // Last two days
+                Math.max(now - 2 * 86_400_000, this.lastChecked),
                 now
             );
 
