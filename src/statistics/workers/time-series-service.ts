@@ -111,11 +111,19 @@ export class TimeSeriesService {
                             [new Date(date), addDays(date, 1)]
                         );
 
+                    console.log(response);
                     if (response.data.length === 0) continue day;
 
-                    response.data[0].slice(1).forEach((v) => {
-                        y += v;
-                    });
+                    if (variant === 'WORKLOAD' || variant === 'TRANSFER') {
+                        y +=
+                            response.data[0][
+                                1 + response.variants.indexOf('average')
+                            ];
+                    } else {
+                        response.data[0].slice(1).forEach((v) => {
+                            y += v;
+                        });
+                    }
                 }
 
                 await prisma.timeSeries.upsert({
