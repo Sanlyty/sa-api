@@ -86,6 +86,20 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getChbInfo(systemId: string): Promise<{
+        chbPairs: [string, string][];
+        portPairs: [string, string][];
+        chbPorts: Record<string, string[]>;
+    }> {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        return (
+            await lastValueFrom(
+                this.httpService.post(`${maintainerUrl}features/chb_info`)
+            )
+        ).data;
+    }
+
     public async getSLAEvents(
         systemId: string,
         from?: number,

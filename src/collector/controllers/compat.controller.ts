@@ -60,6 +60,13 @@ const getFilterFromQuery = (
 export class CompatibilityController {
     constructor(private maintainerService: MaintainerService) {}
 
+    @Get(':systemName/ChbInfo')
+    public async chbInfo(
+        @Param('systemName') systemName
+    ): Promise<ReturnType<MaintainerService['getChbInfo']>> {
+        return await this.maintainerService.getChbInfo(systemName);
+    }
+
     @Get(':systemName/:metricName')
     public async setExternals(
         @Param('systemName') systemName,
