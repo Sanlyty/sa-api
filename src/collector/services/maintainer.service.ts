@@ -65,15 +65,16 @@ export class MaintainerService {
         systemId: string,
         from?: number,
         to?: number
-    ): Promise<
-        {
+    ): Promise<{
+        up_to: number;
+        events: {
             from: number;
             to: number;
             average: number;
             peak: number;
             key: string;
-        }[]
-    > {
+        }[];
+    }> {
         const maintainerUrl = this.maintainerMap[systemId];
 
         return (

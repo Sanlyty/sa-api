@@ -585,7 +585,7 @@ export class DataCenterService {
 
                     for (const pool of system.children) {
                         for (const parityGroup of pool.children) {
-                            parityGroup.metrics = data
+                            parityGroup.metrics = data.events
                                 .filter(({ key }) => key === parityGroup.name)
                                 .map((row) => ({
                                     id: -1,

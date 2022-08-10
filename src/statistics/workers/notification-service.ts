@@ -12,15 +12,20 @@ import { StorageEntityStatus } from '../../collector/enums/storage-entity-status
 @Injectable()
 export class NotificationService {
     private mailer: Transporter | undefined;
-    private lastChecked: number;
+    private lastChecked: { [system: string]: number } = {};
 
     constructor(
         private config: ConfigService,
         private maintainerService: MaintainerService,
         private entityRepo: StorageEntityRepository
     ) {
-        if (existsSync('last_notify'))
-            this.lastChecked = Number(readFileSync('last_notify'));
+        if (existsSync('last_notify')) {
+            const loaded = JSON.parse(readFileSync('last_notify').toString());
+
+            if (typeof loaded === 'object') {
+                this.lastChecked = loaded;
+            }
+        }
 
         if (this.trySetMailer()) {
             this.mailer
@@ -104,12 +109,14 @@ export class NotificationService {
         const now = new Date().getTime();
 
         for (const system of this.maintainerService.getHandledSystems()) {
-            const events = await this.maintainerService.getPGEvents(
+            const { up_to, events } = await this.maintainerService.getPGEvents(
                 system,
                 // Last two days
-                Math.max(now - 2 * 86_400_000, this.lastChecked),
+                Math.max(now - 2 * 86_400_000, this.lastChecked[system] ?? 0),
                 now
             );
+
+            this.lastChecked[system] = up_to;
 
             events.forEach((e) => {
                 const pool = poolMap[`${system}:${e.key}`];
@@ -207,10 +214,9 @@ export class NotificationService {
             }
         }
 
-        this.lastChecked = now;
         writeFile(
             'last_notify',
-            JSON.stringify(now),
+            JSON.stringify(this.lastChecked),
             (e) => e && console.error(e)
         );
     }
