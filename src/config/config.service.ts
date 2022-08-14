@@ -1,41 +1,60 @@
 import { Injectable } from '@nestjs/common';
-import * as fs from 'fs';
 import * as dotenv from 'dotenv';
+import path = require('path');
+
+const { env } = process;
+
+const ensureExists = (key: string, warnOnly?: boolean) => {
+    if (!env[key]?.length) {
+        if (warnOnly) {
+            console.warn(`Missing env var '${key}'`);
+        } else {
+            console.error(`Missing env var '${key}'`);
+            process.exit(1);
+        }
+    }
+};
 
 @Injectable()
 export class ConfigService {
-    private readonly envConfig: { [key: string]: string };
-
     constructor() {
-        this.envConfig = dotenv.parse(
-            fs.readFileSync(`${process.env.CONF_SA_API_PATH}application.env`)
-        );
+        dotenv.config();
+
+        if (env.CONF_SA_API_PATH) {
+            path.join(env.CONF_SA_API_PATH, 'application.env');
+        }
+
+        ensureExists('DATABASE_URL');
     }
 
     getDatabaseSettings() {
-        const cfg = this.envConfig;
-        const production = process.env.NODE_ENV === 'production';
+        const prod = env.NODE_ENV === 'production';
+
+        const url = new URL(env.DATABASE_URL);
+
+        if (url.protocol !== 'postgres:') {
+            console.error(`Invalid database protocol '${url.protocol}'`);
+            process.exit(0);
+        }
 
         return {
-            host: cfg.db_host,
-            port: parseInt(cfg.db_port, 10),
-            username: cfg.db_username,
-            password: cfg.db_password,
-            database: cfg.db_database,
-            synchronize: !production && cfg.db_synchronize === 'true',
-            dropSchema: !production && cfg.db_dropSchema === 'true',
-            logging: cfg.db_logging === 'true',
-            migrations: [this.envConfig.db_migrations ?? 'dist/migration/*.js'],
+            host: url.host,
+            port: Number.parseInt(url.port ?? '5432'),
+            username: url.username,
+            password: url.password,
+            database: url.pathname?.slice(1),
+            synchronize: !prod && env.db_synchronize === 'true',
+            dropSchema: !prod && env.db_dropSchema === 'true',
+            logging: env.db_logging === 'true',
+            migrations: [env.db_migrations ?? 'dist/migration/*.js'],
         };
     }
 
     getSmtpSettings() {
-        const cfg = this.envConfig;
+        if (!env.smtp_host) return undefined;
 
-        if (!cfg.smtp_host) return undefined;
-
-        const [host, port] = cfg.smtp_host.split(':');
-        const [user, pass] = (cfg.smtp_auth ?? '').split(':');
+        const [host, port] = env.smtp_host.split(':');
+        const [user, pass] = (env.smtp_auth ?? '').split(':');
 
         return {
             host,
@@ -48,14 +67,14 @@ export class ConfigService {
     }
 
     getSmtpFrom(): string {
-        return this.envConfig.smtp_from;
+        return env.smtp_from;
     }
 
     getSmtpTo(): string[] | undefined {
-        return this.envConfig.smtp_to?.split(',');
+        return env.smtp_to?.split(',');
     }
 
     getSmtpPlainTo(): string[] | undefined {
-        return this.envConfig.smtp_plain_to?.split(',');
+        return env.smtp_plain_to?.split(',');
     }
 }
