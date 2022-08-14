@@ -311,7 +311,6 @@ export class StorageEntityRepository extends TreeRepository<StorageEntityEntity>
             });
 
         if (datacenters && datacenters.length > 0) {
-            console.log(datacenters.map((d) => Number(d)));
             return query.andWhere('datacenter.id IN (:...idDatacenter)', {
                 idDatacenter: datacenters.map((d) => Number(d)),
             });

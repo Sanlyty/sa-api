@@ -133,7 +133,9 @@ CREATE TABLE "parity_group_metrics" (
     "peak" DOUBLE PRECISION,
     "id_storage_entity" INTEGER,
     "start_time" TIMESTAMP(6),
-    "end_time" TIMESTAMP(6)
+    "end_time" TIMESTAMP(6),
+
+    CONSTRAINT "parity_group_metrics_pkey" PRIMARY KEY ("id_metric")
 );
 
 -- CreateTable

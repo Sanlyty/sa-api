@@ -229,6 +229,9 @@ model StorageEntityDetails {
   switch              String?          @db.VarChar(30)
   slot                String?          @db.VarChar(30)
   wwn                 String?          @db.VarChar(100)
+  covers              String?
+  automation          Boolean?
+  throughput          Int?
   storage_entities    StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "system_details_id_storage_entity_fkey")
 
   @@map("storage_entity_details")
@@ -253,7 +256,7 @@ model SystemMetrics {
 model TimeSeries {
   id      Int @id @default(autoincrement())
   variant String
-  x       DateTime 
+  x       DateTime
   y       Float
 
   @@unique([variant, x])

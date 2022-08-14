@@ -11,16 +11,22 @@ import { LoggingInterceptor } from '../../logging.interceptor';
 @Controller('api/v1/systems')
 @UseInterceptors(LoggingInterceptor)
 export class ExternalController {
-  constructor(private externalService: ExternalService) {
-  }
+    constructor(private externalService: ExternalService) {}
 
-  @Put(':systemName/:subComponent/:componentName/externals')
-  public async setExternals(@Param('systemName') systemName,
-                            @Param('componentName') componentName,
-                            @Param('subComponent') type: CollectorType,
-                            @Body(new ExternalRequestPipe()) dto: ExternalRequestDto): Promise<StorageEntityResponseDto> {
-    const key = StorageEntityKeyUtils.createComponentKey(systemName, componentName, null, StorageEntityKeyUtils.of(type));
-    const storageEntity = await this.externalService.putExternals(key, dto);
-    return StorageEntityTransformer.transform(storageEntity);
-  }
+    @Put(':systemName/:subComponent/:componentName/externals')
+    public async setExternals(
+        @Param('systemName') systemName,
+        @Param('componentName') componentName,
+        @Param('subComponent') type: CollectorType,
+        @Body(new ExternalRequestPipe()) dto: ExternalRequestDto
+    ): Promise<StorageEntityResponseDto> {
+        const key = StorageEntityKeyUtils.createComponentKey(
+            systemName,
+            componentName,
+            null,
+            StorageEntityKeyUtils.of(type)
+        );
+        const storageEntity = await this.externalService.putExternals(key, dto);
+        return StorageEntityTransformer.transform(storageEntity);
+    }
 }

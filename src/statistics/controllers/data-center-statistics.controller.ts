@@ -40,6 +40,27 @@ export class DataCenterStatisticsController {
         return StorageEntityTransformer.transformAll(entities, true, true);
     }
 
+    @Get('pools')
+    async getPools(@Query() queryParams: StatisticQueryParams) {
+        const filter = new StorageEntityFilterVo();
+        filter.metricFilter = MetricFilterUtils.parseMetricFilter(
+            queryParams.metricFilter || []
+        );
+        filter.referenceIds = queryParams.referenceId || [];
+        filter.tiers = queryParams.tier || [];
+        filter.orderBy = OrderByUtils.parseOrderBy(queryParams.orderBy || []);
+
+        const filteredResult =
+            await this.dataCenterService.getPoolMetricsByFilter(
+                filter,
+                queryParams.output
+            );
+
+        return queryParams?.output === 'FLAT'
+            ? StorageEntityMetricTransformer.transformFlat(filteredResult)
+            : StorageEntityMetricTransformer.transform(filteredResult);
+    }
+
     @Get(':metric')
     getMetricAll(
         @Param('metric') metric: string,
@@ -83,25 +104,5 @@ export class DataCenterStatisticsController {
                 toDate: queryParams.toDate,
             }
         );
-    }
-
-    @Get('pools')
-    async getPools(@Query() queryParams: StatisticQueryParams) {
-        const filter = new StorageEntityFilterVo();
-        filter.metricFilter = MetricFilterUtils.parseMetricFilter(
-            queryParams.metricFilter || []
-        );
-        filter.referenceIds = queryParams.referenceId || [];
-        filter.tiers = queryParams.tier || [];
-        filter.orderBy = OrderByUtils.parseOrderBy(queryParams.orderBy || []);
-
-        const filteredResult = await this.dataCenterService.getPoolMetricsByFilter(
-            filter,
-            queryParams.output
-        );
-
-        return queryParams?.output === 'FLAT'
-            ? StorageEntityMetricTransformer.transformFlat(filteredResult)
-            : StorageEntityMetricTransformer.transform(filteredResult);
     }
 }
