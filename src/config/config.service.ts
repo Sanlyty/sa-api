@@ -25,6 +25,7 @@ export class ConfigService {
         }
 
         ensureExists('DATABASE_URL');
+        ensureExists('CONF_MAINTAINER_MAP', true);
     }
 
     getDatabaseSettings() {
