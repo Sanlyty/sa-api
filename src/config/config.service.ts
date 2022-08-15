@@ -41,7 +41,7 @@ export class ConfigService {
         }
 
         return {
-            host: url.host,
+            host: url.hostname,
             port: Number.parseInt(url.port ?? '5432'),
             username: url.username,
             password: url.password,
