@@ -1,3 +1,6 @@
+-- AlterTable
+ALTER TABLE "parity_group_metrics" ADD CONSTRAINT "parity_group_metrics_pkey" PRIMARY KEY ("id_metric");
+
 -- CreateTable
 CREATE TABLE "TimeSeries" (
     "id" SERIAL NOT NULL,
