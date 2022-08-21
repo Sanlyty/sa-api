@@ -102,7 +102,8 @@ export class NotificationService {
             average: number;
             peak: number;
             len: number;
-            when: Date;
+            from: Date;
+            to: Date;
         }[] = [];
 
         const poolMap = await this.getPoolMap();
@@ -125,8 +126,9 @@ export class NotificationService {
 
                 reported.push({
                     system,
+                    from: new Date(e.from),
+                    to: new Date(e.to),
                     len: (e.to - e.from) / 60_000,
-                    when: new Date((e.to + e.from) / 2),
                     average: e.average,
                     peak: e.peak,
                     pg: `PG ${e.key}`,
@@ -155,7 +157,7 @@ export class NotificationService {
             for (const system in systemMap) {
                 html += `<h1>${system}</h1>`;
                 html += '<table>';
-                html += `<tr><th>Parity Group</th><th>Pool Name</th><th>Utilization/Peak [%]</th><th>Date</th><th>Duration [min]</th></tr>`;
+                html += `<tr><th>Parity Group</th><th>Pool Name</th><th>Utilization/Peak [%]</th><th>From</th><th>To</th><th>Duration [min]</th></tr>`;
                 for (const row of systemMap[system]) {
                     html += `<tr><td>${row.pg}</td><td>${
                         row.pool
@@ -163,7 +165,7 @@ export class NotificationService {
                         1
                     )}/${row.peak.toFixed(
                         1
-                    )}</td><td>${row.when.toDateString()}</td><td style="text-align:center">${
+                    )}</td><td>${row.from.toUTCString()}</td><td>${row.to.toUTCString()}</td><td style="text-align:center">${
                         row.len
                     }</td></tr>`;
                 }
@@ -200,7 +202,7 @@ export class NotificationService {
                                         r.pool
                                     }, Utilization=${r.average.toFixed(
                                         1
-                                    )}, Date=${r.when.toDateString()}, Duration=${
+                                    )}, Date=${r.from.toDateString()}, Duration=${
                                         r.len
                                     }`
                             )
