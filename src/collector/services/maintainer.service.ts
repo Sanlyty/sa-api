@@ -188,6 +188,17 @@ export class MaintainerService {
         });
     }
 
+    public async getRanges(id: string): Promise<[number, number][]> {
+        if (!this.handlesSystem(id)) {
+            return undefined;
+        }
+
+        const maintainerUrl = this.maintainerMap[id];
+        return (
+            await lastValueFrom(this.httpService.get(`${maintainerUrl}ranges/`))
+        ).data;
+    }
+
     public async getMaintainerData(
         id: string,
         metric: string,

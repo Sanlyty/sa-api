@@ -67,6 +67,14 @@ export class CompatibilityController {
         return await this.maintainerService.getChbInfo(systemName);
     }
 
+    @Get(':systemName/ranges')
+    public async getRanges(
+        @Param('systemName') systemName
+    ): Promise<[number, number][]> {
+        console.log('yo');
+        return await this.maintainerService.getRanges(systemName);
+    }
+
     @Get(':systemName/:metricName')
     public async setExternals(
         @Param('systemName') systemName,
