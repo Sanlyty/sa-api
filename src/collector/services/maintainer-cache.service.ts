@@ -6,7 +6,6 @@ import * as dayjsIsoWeek from 'dayjs/plugin/isoWeek';
 import * as dayjsMinMax from 'dayjs/plugin/minMax';
 
 import type { MaintainerDataResponse } from '../controllers/compat.controller';
-import { performance } from 'perf_hooks';
 import { ConfigService } from '../../config/config.service';
 import prisma from '../../prisma';
 
@@ -59,6 +58,7 @@ const precachable: {
     map?: 'sum' | 'avg' | `perc-${number}`;
     filter?: `top-${number}`;
     resolution?: number;
+    chunked?: boolean;
 }[] = [
     { metric: 'HG_Rnd_Read_IOPS', map: 'sum' },
     { metric: 'HG_Rnd_Write_IOPS', map: 'sum' },
@@ -77,8 +77,18 @@ const precachable: {
     { metric: 'LDEV_Write_Hit', map: 'avg', resolution: 2 },
     { metric: 'LDEV_Read_Hit', map: 'avg', resolution: 2 },
 
-    { metric: 'LDEV_Read_Response', filter: 'top-10', resolution: 4 },
-    { metric: 'LDEV_Write_Response', filter: 'top-10', resolution: 4 },
+    {
+        metric: 'LDEV_Read_Response',
+        filter: 'top-10',
+        resolution: 4,
+        chunked: true,
+    },
+    {
+        metric: 'LDEV_Write_Response',
+        filter: 'top-10',
+        resolution: 4,
+        chunked: true,
+    },
 
     { metric: 'PHY_Short_MP', resolution: 5 },
     { metric: 'PHY_Short_MP', map: 'avg' },
@@ -135,10 +145,10 @@ export class MaintainerCacheService {
 
         const range = [
             dayjs().startOf('day').subtract(1, 'month'),
-            dayjs().startOf('second'),
+            dayjs().startOf('minute'),
         ].map((a) => a.toDate()) as [Date, Date];
 
-        const start = performance.now();
+        console.time('precache');
 
         for (const system of this.maintainerService.getHandledSystems()) {
             if (!(await this.maintainerService.getStatus(system))) {
@@ -148,8 +158,12 @@ export class MaintainerCacheService {
                 return;
             }
 
+            console.time(system);
+
             for (const pre of precachable) {
                 const key = getCacheKey(system, pre.metric, pre);
+
+                console.time(key);
 
                 try {
                     const { units, variants: underlyingVariants } =
@@ -160,7 +174,7 @@ export class MaintainerCacheService {
                         );
 
                     underlyingVariants.sort();
-                    const variants = pre.map ? [pre.map] : underlyingVariants;
+                    let variants = pre.map ? [pre.map] : underlyingVariants;
 
                     let existing = await prisma.maintainerCacheEntry.findUnique(
                         {
@@ -168,6 +182,9 @@ export class MaintainerCacheService {
                             select: { from: true, to: true, variants: true },
                         }
                     );
+
+                    if (existing && pre.filter?.startsWith('top'))
+                        variants = existing.variants;
 
                     if (existing && !arraysEqual(existing.variants, variants)) {
                         existing = undefined;
@@ -185,25 +202,30 @@ export class MaintainerCacheService {
                         update: {
                             from: range[0],
                             to: range[1],
+                            variants,
                             data: {
-                                deleteMany: {
-                                    timestamp: { lt: range[0] },
-                                },
+                                deleteMany: !existing
+                                    ? {}
+                                    : {
+                                          timestamp: { lt: range[0] },
+                                      },
                             },
                         },
                     });
 
-                    for (let i = 0; ; ++i) {
+                    for (let i = 0; !pre.chunked || i === 0; ++i) {
                         const start = dayjs(range[0]).add(i, 'weeks');
 
                         if (start >= dayjs(range[1])) break;
 
                         const _range = [
                             start,
-                            dayjs.min(
-                                dayjs(range[1]),
-                                start.add(6, 'days').endOf('day')
-                            ),
+                            pre.chunked
+                                ? dayjs(range[1])
+                                : dayjs.min(
+                                      dayjs(range[1]),
+                                      start.add(6, 'days').endOf('day')
+                                  ),
                         ] as [dayjs.Dayjs, dayjs.Dayjs];
 
                         if (
@@ -261,6 +283,9 @@ export class MaintainerCacheService {
                         await prisma.maintainerCacheEntry.update({
                             where: { key },
                             data: {
+                                ...(pre.filter
+                                    ? { variants: result.variants }
+                                    : {}),
                                 data: {
                                     createMany: {
                                         data,
@@ -275,10 +300,14 @@ export class MaintainerCacheService {
                         `Failed to precache ${pre.metric} for ${system}: ${err?.message}`
                     );
                 }
+
+                console.timeEnd(key);
             }
+
+            console.timeEnd(system);
         }
 
-        console.log(`Precache completed in ${performance.now() - start} ms`);
+        console.timeEnd('precache');
     }
 
     public async getData(
