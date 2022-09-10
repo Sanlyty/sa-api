@@ -4,6 +4,7 @@ import { readFileSync } from 'fs';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { lastValueFrom } from 'rxjs';
 import { MetricType } from '../enums/metric-type.enum';
+// import { load_data } from '../../../libreader/pkg/libreader';
 
 @Injectable()
 export class MaintainerService {
@@ -232,11 +233,11 @@ export class MaintainerService {
 
         const maintainerUrl = this.maintainerMap[id];
 
-        const dataranges: number[][] = (
+        const { dataranges } = (
             await lastValueFrom(
                 this.httpService.get(`${maintainerUrl}datasets/${metric}`)
             )
-        ).data.dataranges;
+        ).data as { dataranges: number[][]; yType: string };
 
         if (dataranges.length === 0) {
             return {
@@ -270,7 +271,7 @@ export class MaintainerService {
                 )
             ).data;
 
-        const data: [number, ...number[]][] = (
+        const data = (
             await lastValueFrom(
                 this.httpService.post(
                     `${maintainerUrl}bulkload_json/${metric}`,
@@ -279,6 +280,7 @@ export class MaintainerService {
                         from: range[0].toString(),
                         to: range[1].toString(),
                     }
+                    // { responseType: 'arraybuffer' }
                 )
             )
         ).data;
@@ -286,6 +288,10 @@ export class MaintainerService {
         return {
             variants,
             data,
+            // data: load_data(new Uint8Array(data), yType, variants) as [
+            //     number,
+            //     ...number[]
+            // ][],
         };
     }
 

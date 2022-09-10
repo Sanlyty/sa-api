@@ -42,6 +42,7 @@ import { ParityGroupMetricEntity } from './entities/parity-group-metric.entity';
 import { PgMultiValueMetricCollectorService } from './services/collect/pg-multi-value-metric-collector.service';
 import { MaintainerService } from './services/maintainer.service';
 import { CompatibilityController } from './controllers/compat.controller';
+import { MaintainerCacheService } from './services/maintainer-cache.service';
 
 @Module({
     imports: [
@@ -80,6 +81,7 @@ import { CompatibilityController } from './controllers/compat.controller';
         PortMetricService,
         LatencyMetricTransformer,
         DataCenterService,
+        MaintainerCacheService,
         ExternalService,
         ExternalTypeService,
         LatencyMetricService,
