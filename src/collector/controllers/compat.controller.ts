@@ -71,8 +71,9 @@ export class CompatibilityController {
     public async getRanges(
         @Param('systemName') systemName
     ): Promise<[number, number][]> {
-        console.log('yo');
-        return await this.maintainerService.getRanges(systemName);
+        return (await this.maintainerService.getRanges(systemName)).map(
+            (tuple) => tuple.map((d) => d * 60_000) as [number, number]
+        );
     }
 
     @Get(':systemName/:metricName')
