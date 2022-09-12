@@ -101,6 +101,25 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getFePorts(systemId: string): Promise<{
+        [port: string]: {
+            speed: number;
+            description: string;
+            cables: string;
+            switch: string;
+            covers: string[];
+            automation: boolean;
+        };
+    }> {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        return (
+            await lastValueFrom(
+                this.httpService.post(`${maintainerUrl}features/fe_ports`)
+            )
+        ).data;
+    }
+
     public async getSLAEvents(
         systemId: string,
         from?: number,

@@ -38,6 +38,7 @@ export class PortConnectivityService {
 
             if (!systemEntity) continue;
 
+            const fePorts = await this.maintainerService.getFePorts(system);
             const data = await this.maintainerService.getMaintainerData(
                 system,
                 'Port_KBPS',
@@ -66,10 +67,24 @@ export class PortConnectivityService {
 
             for (const [port, avg] of ports) {
                 if (!(port in portMap)) continue;
+                const portInfo =
+                    port in fePorts
+                        ? {
+                              covers: fePorts[port].covers.join(','),
+                              cables: fePorts[port].cables,
+                              automation: fePorts[port].automation,
+                              speed: fePorts[port].speed,
+                              switch: fePorts[port].switch,
+                              note: fePorts[port].description,
+                          }
+                        : {};
 
                 await prisma.storageEntityDetails.update({
                     where: { id_storage_entity: portMap[port] },
-                    data: { throughput: Math.trunc(avg) },
+                    data: {
+                        ...portInfo,
+                        throughput: Math.trunc(avg),
+                    },
                 });
             }
         }
