@@ -28,6 +28,10 @@ export class StorageEntityTransformer {
         reverse = false,
         withDetail = false
     ): StorageEntityResponseDto {
+        if (storageEntity.idType === StorageEntityType.CHANNEL_BOARD) {
+            console.log(storageEntity);
+        }
+
         const dto = new StorageEntityResponseDto();
         dto.storageEntity = StorageEntityTransformer.transformFromOwner(
             storageEntity,
@@ -57,18 +61,27 @@ export class StorageEntityTransformer {
     public static transformDetail(detailEntity: StorageEntityDetailsEntity) {
         const detailDto = new StorageEntityDetailResponseDto();
         detailDto.arrayModel = detailEntity.model;
-        detailDto.dkc = detailEntity.dkc;
-        detailDto.managementIp = detailEntity.managementIp;
-        detailDto.rack = detailEntity.rack;
-        detailDto.room = detailEntity.room;
-        detailDto.prefixReferenceId = detailEntity.prefixReferenceId;
-        detailDto.sortId = detailEntity.sortId;
-        detailDto.speed = detailEntity.speed;
-        detailDto.note = detailEntity.note;
-        detailDto.cables = detailEntity.cables;
-        detailDto.switch = detailEntity.switch;
-        detailDto.slot = detailEntity.slot;
-        detailDto.wwn = detailEntity.wwn;
+
+        const fields = [
+            'dkc',
+            'managementIp',
+            'rack',
+            'room',
+            'prefixReferenceId',
+            'sortId',
+            'speed',
+            'note',
+            'cables',
+            'switch',
+            'slot',
+            'covers',
+            'automation',
+            'wwn',
+        ];
+
+        for (const field of fields) {
+            detailDto[field] = detailEntity[field];
+        }
 
         return detailDto;
     }
