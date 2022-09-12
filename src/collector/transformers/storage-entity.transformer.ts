@@ -76,6 +76,7 @@ export class StorageEntityTransformer {
             'slot',
             'covers',
             'automation',
+            'throughput',
             'wwn',
         ];
 

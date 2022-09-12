@@ -34,5 +34,7 @@ export class StorageEntityDetailResponseDto {
     @ApiProperty({ required: false })
     automation?: boolean;
     @ApiProperty({ required: false })
+    throughput: number;
+    @ApiProperty({ required: false })
     wwn: string;
 }

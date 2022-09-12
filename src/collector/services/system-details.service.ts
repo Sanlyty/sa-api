@@ -18,13 +18,14 @@ export class SystemDetailsService {
             entity = new StorageEntityDetailsEntity();
             entity.id = id;
         }
+        entity.sortId = isEmpty(request.sortId) ? null : request.sortId;
+
         entity.model = request.arrayModel;
         entity.dkc = request.dkc;
         entity.managementIp = request.managementIp;
         entity.rack = request.rack;
         entity.room = request.room;
         entity.prefixReferenceId = request.prefixReferenceId;
-        entity.sortId = isEmpty(request.sortId) ? null : request.sortId;
         entity.speed = request.speed;
         entity.note = request.note;
         entity.cables = request.cables;
@@ -33,6 +34,7 @@ export class SystemDetailsService {
         entity.wwn = request.wwn;
         entity.covers = request.covers;
         entity.automation = request.automation;
+        entity.throughput = request.throughput;
 
         return await this.systemDetailsRepository.save(entity);
     }

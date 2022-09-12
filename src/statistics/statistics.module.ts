@@ -16,6 +16,7 @@ import { ConfigModule } from '../config/config.module';
 import { StorageEntityRepository } from '../collector/repositories/storage-entity.repository';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TimeSeriesService } from './workers/time-series-service';
+import { PortConnectivityService } from './workers/port-conn-service';
 
 @Module({
     controllers: [
@@ -33,6 +34,7 @@ import { TimeSeriesService } from './workers/time-series-service';
         MaterializedViewRefresher,
         NotificationService,
         TimeSeriesService,
+        PortConnectivityService,
         DatabaseAdminitrationService,
     ],
     imports: [
