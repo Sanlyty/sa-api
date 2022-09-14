@@ -79,13 +79,19 @@ export class PortConnectivityService {
                           }
                         : {};
 
-                await prisma.storageEntityDetails.update({
-                    where: { id_storage_entity: portMap[port] },
-                    data: {
-                        ...portInfo,
-                        throughput: Math.trunc(avg),
-                    },
-                });
+                try {
+                    await prisma.storageEntityDetails.update({
+                        where: { id_storage_entity: portMap[port] },
+                        data: {
+                            ...portInfo,
+                            throughput: Math.trunc(avg),
+                        },
+                    });
+                } catch (err) {
+                    console.error(
+                        `Failed to update port data for ${port} @ ${system}, missing StorageEntityDetails`
+                    );
+                }
             }
         }
     }
