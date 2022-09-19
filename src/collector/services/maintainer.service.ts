@@ -226,23 +226,28 @@ export class MaintainerService {
         options?: {
             variants?: string[];
         }
-    ): Promise<{ variants: string[]; data: [number, ...number[]][] }> {
+    ): Promise<{
+        variants: string[];
+        units: string;
+        data: [number, ...number[]][];
+    }> {
         if (!this.handlesSystem(id)) {
             return undefined;
         }
 
         const maintainerUrl = this.maintainerMap[id];
 
-        const { dataranges } = (
+        const { dataranges, units } = (
             await lastValueFrom(
                 this.httpService.get(`${maintainerUrl}datasets/${metric}`)
             )
-        ).data as { dataranges: number[][]; yType: string };
+        ).data as { dataranges: number[][]; yType: string; units: string };
 
         if (dataranges.length === 0) {
             return {
                 variants: [],
                 data: [],
+                units,
             };
         }
 
@@ -287,6 +292,7 @@ export class MaintainerService {
 
         return {
             variants,
+            units,
             data,
             // data: load_data(new Uint8Array(data), yType, variants) as [
             //     number,

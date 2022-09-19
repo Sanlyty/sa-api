@@ -10,6 +10,7 @@ type QueryParams = Record<'from' | 'to', number | string | Date> & {
 
 export type MaintainerDataResponse = {
     variants: string[];
+    units: string;
     data: [number, ...number[]][];
 };
 

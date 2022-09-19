@@ -155,9 +155,10 @@ export class MaintainerCacheService {
         const cacheKey = getCacheKey(system, metric, qp);
 
         if (this._cache[cacheKey] && this._cachedSince <= range[0]) {
-            const { variants, data } = this._cache[cacheKey];
+            const { variants, data, units } = this._cache[cacheKey];
             return {
                 variants,
+                units,
                 data: data.filter(
                     ([v]) => v >= +range[0] / 60_000 && v <= +range[1] / 60_000
                 ),
@@ -174,6 +175,7 @@ export class MaintainerCacheService {
 
         if (filter) {
             resp = {
+                units: resp.units,
                 variants: filter.map((i) => resp.variants[i]),
                 data: resp.data.map(([key, ...data]) => [
                     key,
@@ -186,6 +188,7 @@ export class MaintainerCacheService {
 
         if (map) {
             resp = {
+                units: resp.units,
                 variants: [qp.map],
                 data: resp.data.map(([key, ...values]) => [key, map(values)]),
             };
