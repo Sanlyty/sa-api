@@ -88,6 +88,12 @@ const precachable: { metric: string; map?: string; filter?: string }[] = [
     { metric: 'HG_Write_Response', map: 'avg' },
     { metric: 'HG_Write_Response', map: 'sum' },
     { metric: 'HG_Write_Response', filter: 'top-10' },
+
+    { metric: 'CHB_KBPS' },
+    { metric: 'PHY_Short_HIE_ISW' },
+    { metric: 'PHY_Short_MPU_HIE' },
+    { metric: 'PHY_Short_Write_Pending_Rate' },
+    { metric: 'PHY_Short_Cache_Usage_Rate_Each_of_MPU' },
 ];
 
 const getCacheKey = (
