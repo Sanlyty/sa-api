@@ -102,6 +102,22 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getPoolInfo(systemId: string): Promise<{
+        [poolId: string]: {
+            id: number;
+            name: string;
+            eccGroups: string[];
+        };
+    }> {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        return (
+            await lastValueFrom(
+                this.httpService.post(`${maintainerUrl}features/pool_info`)
+            )
+        ).data;
+    }
+
     public async getFePorts(systemId: string): Promise<{
         [port: string]: {
             speed: number;

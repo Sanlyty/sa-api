@@ -29,6 +29,13 @@ export class CompatibilityController {
         return await this.maintainerService.getChbInfo(systemName);
     }
 
+    @Get(':systemName/PoolInfo')
+    public async poolInfo(
+        @Param('systemName') systemName
+    ): Promise<ReturnType<MaintainerService['getPoolInfo']>> {
+        return await this.maintainerService.getPoolInfo(systemName);
+    }
+
     @Get(':systemName/ranges')
     public async getRanges(
         @Param('systemName') systemName
