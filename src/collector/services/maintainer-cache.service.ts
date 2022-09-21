@@ -127,15 +127,28 @@ export class MaintainerCacheService {
 
         await Promise.all(
             this.maintainerService.getHandledSystems().map(async (system) => {
+                if (!(await this.maintainerService.getStatus(system))) {
+                    console.warn(
+                        `Skipping precache for ${system} as it is not available`
+                    );
+                    return;
+                }
+
                 for (const pre of precachable) {
                     const key = getCacheKey(system, pre.metric, pre);
 
-                    nextCache[key] = await this.getData(
-                        system,
-                        pre.metric,
-                        range,
-                        { map: pre.map, filter: pre.filter }
-                    );
+                    try {
+                        nextCache[key] = await this.getData(
+                            system,
+                            pre.metric,
+                            range,
+                            { map: pre.map, filter: pre.filter }
+                        );
+                    } catch (err) {
+                        console.error(
+                            `Failed to precache ${pre.metric} for ${system}: ${err?.message}`
+                        );
+                    }
                 }
             })
         );

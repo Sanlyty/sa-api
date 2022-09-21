@@ -110,6 +110,13 @@ export class NotificationService {
         const now = new Date().getTime();
 
         for (const system of this.maintainerService.getHandledSystems()) {
+            if (!(await this.maintainerService.getStatus(system))) {
+                console.warn(
+                    `Skipping PG notifications for ${system} as it is not available`
+                );
+                continue;
+            }
+
             const { up_to, events } = await this.maintainerService.getPGEvents(
                 system,
                 // Last two days

@@ -83,6 +83,18 @@ export class TimeSeriesService {
             MetricType.PHYSICAL_CAPACITY,
         ];
 
+        const systems = [];
+
+        for (const system of this.maintainerService.getHandledSystems()) {
+            if (!(await this.maintainerService.getStatus(system))) {
+                console.warn(
+                    `Skipping time series sum for ${system} as it is not available`
+                );
+            } else {
+                systems.push(system);
+            }
+        }
+
         for (const metric of metrics) {
             const variant = TypeMappingUtils.resolveMetricType(metric);
 
@@ -103,7 +115,7 @@ export class TimeSeriesService {
 
                 let y = 0;
 
-                for (const system of this.maintainerService.getHandledSystems()) {
+                for (const system of systems) {
                     const response =
                         await this.maintainerService.getMaintainerData(
                             system,

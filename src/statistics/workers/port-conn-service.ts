@@ -34,6 +34,13 @@ export class PortConnectivityService {
         ).flatMap((dc) => dc.children);
 
         for (const system of this.maintainerService.getHandledSystems()) {
+            if (!(await this.maintainerService.getStatus(system))) {
+                console.warn(
+                    `Skipping port import for ${system} as it is not available`
+                );
+                continue;
+            }
+
             const systemEntity = entities.find((e) => e.name === system);
 
             if (!systemEntity) continue;

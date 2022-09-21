@@ -28,6 +28,26 @@ export class MaintainerService {
         return Object.keys(this.maintainerMap);
     }
 
+    public async getStatus(
+        system: string
+    ): Promise<
+        { type: string; version: string; features: string[] } | undefined
+    > {
+        if (!this.handlesSystem(system)) return undefined;
+
+        let response;
+
+        try {
+            response = await lastValueFrom(
+                this.httpService.get(this.maintainerMap[system])
+            );
+        } catch {
+            return undefined;
+        }
+
+        return response.status === 200 ? response.data : undefined;
+    }
+
     public async getLatencyAnalysisDates(systemId: string): Promise<string[]> {
         const maintainerUrl = this.maintainerMap[systemId];
 
