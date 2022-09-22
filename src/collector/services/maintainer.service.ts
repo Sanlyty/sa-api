@@ -147,6 +147,7 @@ export class MaintainerService {
             covers: string[];
             automation: boolean;
             slot_port: string;
+            wwn?: string;
         };
     }> {
         const maintainerUrl = this.maintainerMap[systemId];

@@ -84,6 +84,7 @@ export class PortConnectivityService {
                               switch: fePorts[port].switch,
                               note: fePorts[port].description,
                               slot: fePorts[port].slot_port,
+                              wwn: fePorts[port].wwn,
                           }
                         : {};
 
