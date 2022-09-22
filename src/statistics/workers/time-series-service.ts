@@ -8,15 +8,16 @@ import { TypeMappingUtils } from '../utils/type-mapping.utils';
 
 const FILL_IN_DAYS = 90;
 
-// const toUTCDate = (date: Date) => addDays(date, 0);
 const addDays = (date: Date, days: number) =>
-    new Date(
-        Date.UTC(
-            date.getUTCFullYear(),
-            date.getUTCMonth(),
-            date.getUTCDate() + days
-        )
-    );
+    new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+
+// const isSameDay = (a: Date, b: Date) =>
+//     a.getFullYear() === b.getFullYear() &&
+//     a.getMonth() === b.getMonth() &&
+//     a.getDate() === b.getDate();
+
+const toDateString = (date: Date) =>
+    `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 
 @Injectable()
 export class TimeSeriesService {
@@ -64,8 +65,8 @@ export class TimeSeriesService {
             const metricType = TypeMappingUtils.resolveMetricType(metric.type);
 
             await prisma.timeSeries.createMany({
-                data: metric.data.map(({ date: x, value: y }) => ({
-                    x,
+                data: metric.data.map(({ date, value: y }) => ({
+                    x: toDateString(date),
                     y,
                     variant: metricType,
                 })),
@@ -106,12 +107,12 @@ export class TimeSeriesService {
                         x: { gte: addDays(new Date(), -FILL_IN_DAYS) },
                     },
                 })
-            ).map((d) => d.x.getTime());
+            ).map((d) => toDateString(d.x));
 
             day: for (let i = 0; i < FILL_IN_DAYS; i++) {
                 const date = addDays(new Date(), -i);
 
-                if (existingDates.includes(date.getTime())) continue;
+                if (existingDates.includes(toDateString(date))) continue;
 
                 let y = 0;
 
@@ -137,9 +138,10 @@ export class TimeSeriesService {
                     }
                 }
 
+                const x = toDateString(date);
                 await prisma.timeSeries.upsert({
-                    where: { variant_x: { x: date, variant } },
-                    create: { x: date, y, variant },
+                    where: { variant_x: { x, variant } },
+                    create: { x, y, variant },
                     update: { y },
                 });
             }
