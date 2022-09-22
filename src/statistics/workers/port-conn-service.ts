@@ -83,6 +83,7 @@ export class PortConnectivityService {
                               speed: fePorts[port].speed,
                               switch: fePorts[port].switch,
                               note: fePorts[port].description,
+                              slot: fePorts[port].slot_port,
                           }
                         : {};
 
