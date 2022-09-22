@@ -79,4 +79,8 @@ export class ConfigService {
     getSmtpPlainTo(): string[] | undefined {
         return env.smtp_plain_to?.split(',');
     }
+
+    getShouldPrefetch(): boolean {
+        return env.SHOULD_PREFETCH?.toLowerCase() === 'true';
+    }
 }

@@ -6,6 +6,7 @@ import * as dayjsIsoWeek from 'dayjs/plugin/isoWeek';
 
 import type { MaintainerDataResponse } from '../controllers/compat.controller';
 import { performance } from 'perf_hooks';
+import { ConfigService } from '../../config/config.service';
 
 dayjs.extend(dayjsIsoWeek);
 
@@ -109,12 +110,17 @@ export class MaintainerCacheService {
         [key: string]: MaintainerDataResponse;
     } = {};
 
-    constructor(private maintainerService: MaintainerService) {
+    constructor(
+        private maintainerService: MaintainerService,
+        private config: ConfigService
+    ) {
         this.precache();
     }
 
     @Cron('0 0 */6 * * *')
     public async precache() {
+        if (!this.config.getShouldPrefetch()) return;
+
         console.log('Precaching compat data');
 
         const nextCache: typeof this._cache = {};
