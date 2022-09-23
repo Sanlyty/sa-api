@@ -11,11 +11,6 @@ const FILL_IN_DAYS = 90;
 const addDays = (date: Date, days: number) =>
     new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 
-// const isSameDay = (a: Date, b: Date) =>
-//     a.getFullYear() === b.getFullYear() &&
-//     a.getMonth() === b.getMonth() &&
-//     a.getDate() === b.getDate();
-
 const toDateString = (date: Date) =>
     `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
 
@@ -66,7 +61,7 @@ export class TimeSeriesService {
 
             await prisma.timeSeries.createMany({
                 data: metric.data.map(({ date, value: y }) => ({
-                    x: toDateString(date),
+                    x: addDays(date, 0),
                     y,
                     variant: metricType,
                 })),
@@ -138,7 +133,7 @@ export class TimeSeriesService {
                     }
                 }
 
-                const x = toDateString(date);
+                const x = addDays(date, 0);
                 await prisma.timeSeries.upsert({
                     where: { variant_x: { x, variant } },
                     create: { x, y, variant },
