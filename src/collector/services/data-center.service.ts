@@ -465,7 +465,7 @@ export class DataCenterService {
             )
             .leftJoinAndSelect('pool.externals', 'external')
             .leftJoinAndSelect('metrics.metricTypeEntity', 'typeEntity')
-            .Where(
+            .where(
                 'pool.id IN (:...ids) AND pool.idCatComponentStatus = :poolStatus',
                 { ids: poolIds, poolStatus: StorageEntityStatus.ACTIVE }
             )
