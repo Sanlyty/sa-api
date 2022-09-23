@@ -43,6 +43,7 @@ import { PgMultiValueMetricCollectorService } from './services/collect/pg-multi-
 import { MaintainerService } from './services/maintainer.service';
 import { CompatibilityController } from './controllers/compat.controller';
 import { MaintainerCacheService } from './services/maintainer-cache.service';
+import { ConfigModule } from '../config/config.module';
 
 @Module({
     imports: [
@@ -70,6 +71,7 @@ import { MaintainerCacheService } from './services/maintainer-cache.service';
             StorageEntityRepository,
         ]),
         HttpModule,
+        ConfigModule,
     ],
     providers: [
         PoolMetricService,
