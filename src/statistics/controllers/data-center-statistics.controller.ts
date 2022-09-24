@@ -42,6 +42,8 @@ export class DataCenterStatisticsController {
 
     @Get('pools')
     async getPools(@Query() queryParams: StatisticQueryParams) {
+        if (!queryParams.output) queryParams.output = 'FLAT';
+
         const filter = new StorageEntityFilterVo();
         filter.metricFilter = MetricFilterUtils.parseMetricFilter(
             queryParams.metricFilter || []
