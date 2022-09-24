@@ -56,9 +56,9 @@ export class PortConnectivityService {
                     [
                         normalizePortName(p),
                         data.data.reduce(
-                            (prev, row) => prev + row[i] / data.data.length,
+                            (prev, row) => prev + row[i + 1] / data.data.length,
                             0
-                        ) / 1024,
+                        ) / 1000,
                     ] as [string, number]
             );
 
@@ -93,7 +93,7 @@ export class PortConnectivityService {
                         where: { id_storage_entity: portMap[port] },
                         data: {
                             ...portInfo,
-                            throughput: Math.trunc(avg),
+                            throughput: Math.round(avg),
                         },
                     });
                 } catch (err) {
