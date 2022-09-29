@@ -33,6 +33,7 @@ export class SystemDetailsService {
         entity.slot = request.slot;
         entity.wwn = request.wwn;
         entity.covers = request.covers;
+        entity.san_env = request.san_env;
         entity.automation = request.automation;
         entity.throughput = request.throughput;
 

@@ -37,4 +37,6 @@ export class StorageEntityDetailsEntity {
     covers: string;
     @Column({ name: 'throughput' })
     throughput: number;
+    @Column({ name: 'san_env' })
+    san_env?: string;
 }

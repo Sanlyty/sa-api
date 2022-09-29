@@ -77,6 +77,7 @@ export class StorageEntityTransformer {
             'covers',
             'automation',
             'throughput',
+            'san_env',
             'wwn',
         ];
 

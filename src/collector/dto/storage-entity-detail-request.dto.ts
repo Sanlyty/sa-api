@@ -33,6 +33,8 @@ export class StorageEntityDetailRequestDto {
     @ApiProperty({ required: false })
     covers?: string;
     @ApiProperty({ required: false })
+    san_env?: string;
+    @ApiProperty({ required: false })
     automation?: boolean;
     @ApiProperty({ required: false })
     throughput: number;
