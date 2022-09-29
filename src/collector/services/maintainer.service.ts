@@ -148,6 +148,7 @@ export class MaintainerService {
             automation: boolean;
             slot_port: string;
             wwn?: string;
+            san_env?: string;
         };
     }> {
         const maintainerUrl = this.maintainerMap[systemId];

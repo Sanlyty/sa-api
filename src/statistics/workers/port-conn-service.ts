@@ -85,6 +85,7 @@ export class PortConnectivityService {
                               note: fePorts[port].description,
                               slot: fePorts[port].slot_port,
                               wwn: fePorts[port].wwn,
+                              san_env: fePorts[port].san_env,
                           }
                         : {};
 

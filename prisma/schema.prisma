@@ -232,6 +232,7 @@ model StorageEntityDetails {
   covers              String?
   automation          Boolean?
   throughput          Int?
+  san_env             String?
   storage_entities    StorageEntities @relation(fields: [id_storage_entity], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "system_details_id_storage_entity_fkey")
 
   @@map("storage_entity_details")
