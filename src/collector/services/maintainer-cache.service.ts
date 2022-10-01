@@ -3,12 +3,15 @@ import { Cron } from '@nestjs/schedule';
 import { MaintainerService } from './maintainer.service';
 import * as dayjs from 'dayjs';
 import * as dayjsIsoWeek from 'dayjs/plugin/isoWeek';
+import * as dayjsMinMax from 'dayjs/plugin/minMax';
 
 import type { MaintainerDataResponse } from '../controllers/compat.controller';
 import { performance } from 'perf_hooks';
 import { ConfigService } from '../../config/config.service';
+import prisma from '../../prisma';
 
 dayjs.extend(dayjsIsoWeek);
+dayjs.extend(dayjsMinMax);
 
 const percRegex = /^perc-(\d+(?:\.\d+)?)$/;
 const getMapFromQuery = (
@@ -51,7 +54,12 @@ const getFilterFromQuery = (
     return undefined;
 };
 
-const precachable: { metric: string; map?: string; filter?: string }[] = [
+const precachable: {
+    metric: string;
+    map?: 'sum' | 'avg' | `perc-${number}`;
+    filter?: `top-${number}`;
+    resolution?: number;
+}[] = [
     { metric: 'HG_Rnd_Read_IOPS', map: 'sum' },
     { metric: 'HG_Rnd_Write_IOPS', map: 'sum' },
     { metric: 'HG_Seq_Write_IOPS', map: 'sum' },
@@ -62,14 +70,17 @@ const precachable: { metric: string; map?: string; filter?: string }[] = [
     { metric: 'HG_D2CR_Trans', map: 'sum' },
     { metric: 'HG_D2CS_Trans', map: 'sum' },
 
-    { metric: 'LDEV_Write_Response', map: 'avg' },
-    { metric: 'LDEV_Read_Response', map: 'avg' },
-    { metric: 'LDEV_Write_BlockSize', map: 'avg' },
-    { metric: 'LDEV_Read_BlockSize', map: 'avg' },
-    { metric: 'LDEV_Write_Hit', map: 'avg' },
-    { metric: 'LDEV_Read_Hit', map: 'avg' },
+    { metric: 'LDEV_Write_Response', map: 'avg', resolution: 2 },
+    { metric: 'LDEV_Read_Response', map: 'avg', resolution: 2 },
+    { metric: 'LDEV_Write_BlockSize', map: 'avg', resolution: 2 },
+    { metric: 'LDEV_Read_BlockSize', map: 'avg', resolution: 2 },
+    { metric: 'LDEV_Write_Hit', map: 'avg', resolution: 2 },
+    { metric: 'LDEV_Read_Hit', map: 'avg', resolution: 2 },
 
-    { metric: 'PHY_Short_MP' },
+    { metric: 'LDEV_Read_Response', filter: 'top-10', resolution: 4 },
+    { metric: 'LDEV_Write_Response', filter: 'top-10', resolution: 4 },
+
+    { metric: 'PHY_Short_MP', resolution: 5 },
     { metric: 'PHY_Short_MP', map: 'avg' },
     { metric: 'PHY_Short_MP', map: 'perc-1' },
     { metric: 'PHY_Short_PG' },
@@ -83,19 +94,23 @@ const precachable: { metric: string; map?: string; filter?: string }[] = [
     { metric: 'HG_TransRate', filter: 'top-10' },
     { metric: 'HG_IOPS', map: 'sum' },
     { metric: 'HG_IOPS', filter: 'top-10' },
-    { metric: 'HG_Read_Response', map: 'avg' },
     { metric: 'HG_Read_Response', map: 'sum' },
     { metric: 'HG_Read_Response', filter: 'top-10' },
-    { metric: 'HG_Write_Response', map: 'avg' },
     { metric: 'HG_Write_Response', map: 'sum' },
     { metric: 'HG_Write_Response', filter: 'top-10' },
 
     { metric: 'CHB_KBPS' },
-    { metric: 'PHY_Short_HIE_ISW' },
+    { metric: 'PHY_Short_HIE_ISW', resolution: 5 },
     { metric: 'PHY_Short_MPU_HIE' },
     { metric: 'PHY_Short_Write_Pending_Rate' },
     { metric: 'PHY_Short_Cache_Usage_Rate_Each_of_MPU' },
 ];
+
+const arraysEqual = <T>(a: T[], b: T[]): boolean => {
+    if (a.length !== b.length) return false;
+
+    return !a.some((val, idx) => b[idx] !== val);
+};
 
 const getCacheKey = (
     system: string,
@@ -105,11 +120,6 @@ const getCacheKey = (
 
 @Injectable()
 export class MaintainerCacheService {
-    private _cachedSince = new Date();
-    private _cache: {
-        [key: string]: MaintainerDataResponse;
-    } = {};
-
     constructor(
         private maintainerService: MaintainerService,
         private config: ConfigService
@@ -123,10 +133,9 @@ export class MaintainerCacheService {
 
         console.log('Precaching compat data');
 
-        const nextCache: typeof this._cache = {};
         const range = [
             dayjs().startOf('day').subtract(1, 'month'),
-            dayjs().endOf('day').startOf('second'),
+            dayjs().startOf('second'),
         ].map((a) => a.toDate()) as [Date, Date];
 
         const start = performance.now();
@@ -143,13 +152,119 @@ export class MaintainerCacheService {
                 const key = getCacheKey(system, pre.metric, pre);
 
                 try {
-                    nextCache[key] = await this.getData(
-                        system,
-                        pre.metric,
-                        range,
-                        { map: pre.map, filter: pre.filter },
-                        true
+                    const { units, variants } =
+                        await this.maintainerService.getRecommendedVariants(
+                            system,
+                            pre.metric,
+                            range
+                        );
+
+                    variants.sort();
+
+                    let existing = await prisma.maintainerCacheEntry.findUnique(
+                        {
+                            where: { key },
+                            select: { from: true, to: true, variants: true },
+                        }
                     );
+
+                    if (existing && !arraysEqual(existing.variants, variants)) {
+                        existing = undefined;
+                    }
+
+                    await prisma.maintainerCacheEntry.upsert({
+                        where: { key },
+                        create: {
+                            key,
+                            from: range[0],
+                            to: range[1],
+                            units,
+                            variants,
+                        },
+                        update: {
+                            from: range[0],
+                            to: range[1],
+                            data: {
+                                deleteMany: {
+                                    timestamp: { lt: range[0] },
+                                },
+                            },
+                        },
+                    });
+
+                    for (let i = 0; ; ++i) {
+                        const start = dayjs(range[0]).add(i, 'weeks');
+
+                        if (start >= dayjs(range[1])) break;
+
+                        const _range = [
+                            start,
+                            dayjs.min(
+                                dayjs(range[1]),
+                                start.add(6, 'days').endOf('day')
+                            ),
+                        ] as [dayjs.Dayjs, dayjs.Dayjs];
+
+                        if (
+                            existing &&
+                            +_range[0] <= +existing.to &&
+                            +_range[1] >= +existing.from
+                        ) {
+                            if (
+                                +_range[0] >= +existing.from &&
+                                +_range[1] <= +existing.to
+                            )
+                                continue;
+                            else if (
+                                +_range[0] <= +existing.from &&
+                                +_range[1] >= +existing.to
+                            ) {
+                                // Nothing yet
+                            } else if (+_range[0] < +existing.from)
+                                _range[1] = dayjs(existing.from);
+                            else if (+_range[1] > +existing.to)
+                                _range[0] = dayjs(existing.to);
+                        }
+
+                        const result = await this.getData(
+                            system,
+                            pre.metric,
+                            _range.map((d) => d.toDate()) as [Date, Date],
+                            { map: pre.map, filter: pre.filter },
+                            true
+                        );
+
+                        if (pre.resolution) {
+                            let prev = 0;
+                            result.data = result.data.filter(([time]) => {
+                                if (time - prev >= pre.resolution) {
+                                    prev = time;
+                                    return true;
+                                }
+
+                                return false;
+                            });
+                        }
+
+                        const data = result.data
+                            .filter(([, val]) => val !== undefined)
+                            .map((row) => ({
+                                timestamp: new Date(row[0] * 60_000),
+                                values: row,
+                            }));
+
+                        await prisma.maintainerCacheEntry.update({
+                            where: { key },
+                            data: {
+                                data: {
+                                    createMany: {
+                                        data,
+                                        skipDuplicates: true,
+                                    },
+                                },
+                            },
+                        });
+                    }
                 } catch (err) {
                     console.error(
                         `Failed to precache ${pre.metric} for ${system}: ${err?.message}`
@@ -159,9 +274,6 @@ export class MaintainerCacheService {
         }
 
         console.log(`Precache completed in ${performance.now() - start} ms`);
-
-        this._cache = nextCache;
-        this._cachedSince = new Date(range[0]);
     }
 
     public async getData(
@@ -177,22 +289,36 @@ export class MaintainerCacheService {
             );
         }
 
-        const cacheKey = getCacheKey(system, metric, qp);
+        const cacheEntry = ignoreCache
+            ? undefined
+            : await prisma.maintainerCacheEntry.findUnique({
+                  where: { key: getCacheKey(system, metric, qp) },
+              });
 
-        if (
-            this._cache[cacheKey] &&
-            this._cachedSince <= range[0] &&
-            !ignoreCache
-        ) {
-            const { variants, data, units } = this._cache[cacheKey];
+        if (!ignoreCache)
+            console.log(`cache ${cacheEntry ? 'hit' : 'MISS'} for ${metric}`);
+
+        if (cacheEntry && cacheEntry.from <= range[0]) {
+            const data = (
+                await prisma.maintainerCacheRows.findMany({
+                    where: {
+                        entryKey: cacheEntry.key,
+                        timestamp: { gte: range[0], lte: range[1] },
+                    },
+                    select: { values: true },
+                    orderBy: { timestamp: 'asc' },
+                })
+            ).map(({ values }) => values as [number, ...number[]]);
+
             return {
-                variants,
-                units,
-                data: data.filter(
-                    ([v]) => v >= +range[0] / 60_000 && v <= +range[1] / 60_000
-                ),
+                variants: cacheEntry.variants,
+                units: cacheEntry.units,
+                data,
             };
         }
+
+        if (!ignoreCache)
+            console.warn(`cache MISS for ${metric};${qp.map};${qp.filter}`);
 
         if (['avg', 'sum'].includes(qp.map) && !qp.filter) {
             return await this.maintainerService.getMaintainerData(

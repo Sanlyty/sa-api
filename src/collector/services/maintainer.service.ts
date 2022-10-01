@@ -258,6 +258,39 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getRecommendedVariants(
+        system: string,
+        metric: string,
+        range: [Date, Date]
+    ): Promise<{ units: string; variants: string[] }> {
+        if (!this.handlesSystem(system)) {
+            return undefined;
+        }
+
+        const maintainerUrl = this.maintainerMap[system];
+
+        const { units } = (
+            await lastValueFrom(
+                this.httpService.get(`${maintainerUrl}datasets/${metric}`)
+            )
+        ).data as { units: string };
+
+        const variants = (
+            await lastValueFrom(
+                this.httpService.post(
+                    `${maintainerUrl}features/variant_recommend`,
+                    {
+                        id: metric,
+                        from: Math.round(+range[0] / 60_000).toString(),
+                        to: Math.round(+range[1] / 60_000).toString(),
+                    }
+                )
+            )
+        ).data as string[];
+
+        return { units, variants };
+    }
+
     public async getMaintainerData(
         id: string,
         metric: string,
@@ -330,6 +363,8 @@ export class MaintainerService {
                 )
             )
         ).data;
+
+        // console.log(data);
 
         return {
             variants: options?.op ? [options.op] : variants,

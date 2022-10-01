@@ -36,3 +36,4 @@ lerna-debug.log*
 maintainers.json
 last_notify
 .env
+*.heapsnapshot
