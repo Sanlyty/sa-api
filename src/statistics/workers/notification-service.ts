@@ -159,24 +159,32 @@ export class NotificationService {
             const subject = `Storage Analytics Warning - ${
                 systems.length === 1 ? systems[0] : 'multiple systems'
             } - Parity Group Utilization Alert`;
-            let html = '';
+            let html =
+                '<style>td,th{border:1px solid black;padding:4px;}</style>';
 
             for (const system in systemMap) {
                 html += `<h1>${system}</h1>`;
-                html += '<table>';
-                html += `<tr><th>Parity Group</th><th>Pool Name</th><th>Utilization/Peak [%]</th><th>From</th><th>To</th><th>Duration [min]</th></tr>`;
+                html +=
+                    '<table style="border:1px solid black;border-collapse:collapse;margin-bottom:1em;">';
+                html += `<tr><th>Parity Group</th><th>Pool Name</th><th>Utilization/Peak</th><th>From</th><th>To</th><th>Duration [min]</th></tr>`;
                 for (const row of systemMap[system]) {
                     html += `<tr><td>${row.pg}</td><td>${
                         row.pool
                     }</td><td style="text-align:center">${row.average.toFixed(
                         1
-                    )}/${row.peak.toFixed(
+                    )}%/${row.peak.toFixed(
                         1
-                    )}</td><td>${row.from.toUTCString()}</td><td>${row.to.toUTCString()}</td><td style="text-align:center">${
+                    )}%</td><td>${row.from.toUTCString()}</td><td>${row.to.toUTCString()}</td><td style="text-align:center">${
                         row.len
                     }</td></tr>`;
                 }
                 html += '</table>';
+
+                const url = new URL(
+                    `/overview/${system}/dpSla`,
+                    this.config.getPublicUrl()
+                );
+                html += `<a href="${url.href}">For more details view in Graphium Dashboard</a>`;
             }
 
             try {

@@ -83,4 +83,8 @@ export class ConfigService {
     getShouldPrefetch(): boolean {
         return env.SHOULD_PREFETCH?.toLowerCase() === 'true';
     }
+
+    getPublicUrl(): string {
+        return env.PUBLIC_URL ?? 'http://localhost:4200';
+    }
 }
