@@ -36,6 +36,13 @@ export class CompatibilityController {
         return await this.maintainerService.getPoolInfo(systemName);
     }
 
+    @Get(':systemName/FePorts')
+    public async fePorts(
+        @Param('systemName') systemName
+    ): Promise<ReturnType<MaintainerService['getFePorts']>> {
+        return await this.maintainerService.getFePorts(systemName);
+    }
+
     @Get(':systemName/ranges')
     public async getRanges(
         @Param('systemName') systemName
