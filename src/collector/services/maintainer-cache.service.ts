@@ -62,12 +62,12 @@ const precachable: { metric: string; map?: string; filter?: string }[] = [
     { metric: 'HG_D2CR_Trans', map: 'sum' },
     { metric: 'HG_D2CS_Trans', map: 'sum' },
 
-    { metric: 'HG_Write_Response', map: 'avg' },
-    { metric: 'HG_Read_Response', map: 'avg' },
-    { metric: 'HG_Write_BlockSize', map: 'avg' },
-    { metric: 'HG_Read_BlockSize', map: 'avg' },
-    { metric: 'HG_Write_Hit', map: 'avg' },
-    { metric: 'HG_Read_Hit', map: 'avg' },
+    { metric: 'LDEV_Write_Response', map: 'avg' },
+    { metric: 'LDEV_Read_Response', map: 'avg' },
+    { metric: 'LDEV_Write_BlockSize', map: 'avg' },
+    { metric: 'LDEV_Read_BlockSize', map: 'avg' },
+    { metric: 'LDEV_Write_Hit', map: 'avg' },
+    { metric: 'LDEV_Read_Hit', map: 'avg' },
 
     { metric: 'PHY_Short_MP' },
     { metric: 'PHY_Short_MP', map: 'avg' },
@@ -147,7 +147,8 @@ export class MaintainerCacheService {
                         system,
                         pre.metric,
                         range,
-                        { map: pre.map, filter: pre.filter }
+                        { map: pre.map, filter: pre.filter },
+                        true
                     );
                 } catch (err) {
                     console.error(
@@ -167,7 +168,8 @@ export class MaintainerCacheService {
         system: string,
         metric: string,
         range: [Date, Date],
-        qp: { map?: string; filter?: string }
+        qp: { map?: string; filter?: string },
+        ignoreCache?: boolean
     ): Promise<MaintainerDataResponse> {
         if (!this.maintainerService.handlesSystem(system)) {
             throw new BadRequestException(
@@ -177,7 +179,11 @@ export class MaintainerCacheService {
 
         const cacheKey = getCacheKey(system, metric, qp);
 
-        if (this._cache[cacheKey] && this._cachedSince <= range[0]) {
+        if (
+            this._cache[cacheKey] &&
+            this._cachedSince <= range[0] &&
+            !ignoreCache
+        ) {
             const { variants, data, units } = this._cache[cacheKey];
             return {
                 variants,
@@ -186,6 +192,15 @@ export class MaintainerCacheService {
                     ([v]) => v >= +range[0] / 60_000 && v <= +range[1] / 60_000
                 ),
             };
+        }
+
+        if (['avg', 'sum'].includes(qp.map) && !qp.filter) {
+            return await this.maintainerService.getMaintainerData(
+                system,
+                metric,
+                range,
+                { op: qp.map as 'avg' | 'sum' }
+            );
         }
 
         let resp = await this.maintainerService.getMaintainerData(

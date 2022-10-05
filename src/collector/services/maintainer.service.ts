@@ -264,6 +264,7 @@ export class MaintainerService {
         durationOrRange: number | [Date, Date],
         options?: {
             variants?: string[];
+            op?: 'sum' | 'avg';
         }
     ): Promise<{
         variants: string[];
@@ -323,6 +324,7 @@ export class MaintainerService {
                         variants,
                         from: range[0].toString(),
                         to: range[1].toString(),
+                        op: options?.op,
                     }
                     // { responseType: 'arraybuffer' }
                 )
@@ -330,7 +332,7 @@ export class MaintainerService {
         ).data;
 
         return {
-            variants,
+            variants: options?.op ? [options.op] : variants,
             units,
             data,
             // data: load_data(new Uint8Array(data), yType, variants) as [
