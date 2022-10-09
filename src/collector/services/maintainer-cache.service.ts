@@ -152,14 +152,15 @@ export class MaintainerCacheService {
                 const key = getCacheKey(system, pre.metric, pre);
 
                 try {
-                    const { units, variants } =
+                    const { units, variants: underlyingVariants } =
                         await this.maintainerService.getRecommendedVariants(
                             system,
                             pre.metric,
                             range
                         );
 
-                    variants.sort();
+                    underlyingVariants.sort();
+                    const variants = pre.map ? [pre.map] : underlyingVariants;
 
                     let existing = await prisma.maintainerCacheEntry.findUnique(
                         {
@@ -230,7 +231,11 @@ export class MaintainerCacheService {
                             system,
                             pre.metric,
                             _range.map((d) => d.toDate()) as [Date, Date],
-                            { map: pre.map, filter: pre.filter },
+                            {
+                                map: pre.map,
+                                filter: pre.filter,
+                                variants: underlyingVariants,
+                            },
                             true
                         );
 
@@ -280,7 +285,7 @@ export class MaintainerCacheService {
         system: string,
         metric: string,
         range: [Date, Date],
-        qp: { map?: string; filter?: string },
+        qp: { map?: string; filter?: string; variants?: string[] },
         ignoreCache?: boolean
     ): Promise<MaintainerDataResponse> {
         if (!this.maintainerService.handlesSystem(system)) {
@@ -332,7 +337,8 @@ export class MaintainerCacheService {
         let resp = await this.maintainerService.getMaintainerData(
             system,
             metric,
-            range
+            range,
+            { variants: qp.variants }
         );
 
         const filter = getFilterFromQuery(qp.filter, resp);
