@@ -291,6 +291,39 @@ export class MaintainerService {
         return { units, variants };
     }
 
+    public async getExtremalVariants(
+        system: string,
+        metric: string,
+        range: [Date, Date],
+        filter: `${'top' | 'bot'}-${number}`
+    ): Promise<{ units: string; variants: string[] }> {
+        if (!this.handlesSystem(system)) {
+            return undefined;
+        }
+
+        const maintainerUrl = this.maintainerMap[system];
+
+        const { units } = (
+            await lastValueFrom(
+                this.httpService.get(`${maintainerUrl}datasets/${metric}`)
+            )
+        ).data as { units: string };
+
+        const variants = (
+            await lastValueFrom(
+                this.httpService.post(`${maintainerUrl}extremals`, {
+                    id: metric,
+                    from: Math.round(+range[0] / 60_000).toString(),
+                    to: Math.round(+range[1] / 60_000).toString(),
+                    agg: filter.startsWith('bot') ? 'Bot' : 'Top',
+                    count: Number.parseInt(filter.split('-')[1]),
+                })
+            )
+        ).data as string[];
+
+        return { units, variants };
+    }
+
     public async getMaintainerData(
         id: string,
         metric: string,

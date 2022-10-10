@@ -84,6 +84,10 @@ export class ConfigService {
         return env.SHOULD_PREFETCH?.toLowerCase() === 'true';
     }
 
+    getMaxParallel(): number | undefined {
+        return env.MAX_PARALLEL ? Number.parseInt(env.MAX_PARALLEL) : undefined;
+    }
+
     getPublicUrl(): string {
         return env.PUBLIC_URL ?? 'http://localhost:4200';
     }
