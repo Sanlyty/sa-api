@@ -150,10 +150,7 @@ export class MaintainerCacheService {
         console.log('Precaching compat data');
 
         // ! for debugging: '2022-09-10 10:30'
-        const rangeStart = dayjs('2022-09-10 10:30')
-            .startOf('day')
-            .subtract(1, 'month')
-            .toDate();
+        const rangeStart = dayjs().startOf('day').subtract(1, 'month').toDate();
 
         console.time('precache');
 
@@ -315,23 +312,40 @@ export class MaintainerCacheService {
                                 .map((row) => ({
                                     timestamp: new Date(row[0] * 60_000),
                                     values: row,
+                                    entryKey: key,
                                 }));
 
                             console.time(key + ':db_write');
                             await prisma.maintainerCacheEntry.update({
                                 where: { key },
                                 data: {
-                                    ...(pre.filter
-                                        ? { variants: result.variants }
-                                        : {}),
+                                    variants: result.variants,
                                     data: {
-                                        createMany: {
-                                            data,
-                                            skipDuplicates: true,
+                                        deleteMany: {
+                                            timestamp: {
+                                                gte: _range[0].toDate(),
+                                                lte: _range[1].toDate(),
+                                            },
                                         },
                                     },
                                 },
                             });
+
+                            const window = 60 * 24;
+                            await Promise.all(
+                                [
+                                    ...new Array(
+                                        Math.ceil(data.length / window)
+                                    ).keys(),
+                                ].map((i) =>
+                                    prisma.maintainerCacheRows.createMany({
+                                        data: data.slice(
+                                            i * window,
+                                            (i + 1) * window
+                                        ),
+                                    })
+                                )
+                            );
                             console.timeEnd(key + ':db_write');
                         }
                     } catch (err) {
