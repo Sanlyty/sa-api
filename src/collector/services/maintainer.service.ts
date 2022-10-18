@@ -4,11 +4,21 @@ import { readFileSync } from 'fs';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { lastValueFrom } from 'rxjs';
 import { MetricType } from '../enums/metric-type.enum';
+import { Cron } from '@nestjs/schedule';
 // import { load_data } from '../../../libreader/pkg/libreader';
+
+type Dataset = {
+    id: string;
+    category: string[];
+    units: string;
+    xType: string;
+    yType: string;
+};
 
 @Injectable()
 export class MaintainerService {
     private maintainerMap: Record<string, string> = {};
+    private datasets: Record<string, Dataset[]> = {};
 
     constructor(private httpService: HttpService) {
         this.maintainerMap = process.env.CONF_MAINTAINER_MAP
@@ -18,6 +28,19 @@ export class MaintainerService {
                   })
               )
             : {};
+
+        this.updateDatasets();
+    }
+
+    @Cron('0 0 * * *')
+    public async updateDatasets() {
+        await Promise.all(
+            Object.entries(this.maintainerMap).map(async ([system, url]) => {
+                this.datasets[system] = await lastValueFrom(
+                    this.httpService.get(url + 'datasets')
+                ).then((d) => d.data);
+            })
+        );
     }
 
     public handlesSystem(id: string): boolean {
@@ -46,6 +69,21 @@ export class MaintainerService {
         }
 
         return response.status === 200 ? response.data : undefined;
+    }
+
+    public async getDatasetInfo(
+        system: string,
+        dataset: string
+    ): Promise<Dataset | undefined> {
+        const local = this.datasets[system]?.find((d) => d.id === dataset);
+
+        if (local) return local;
+
+        return await lastValueFrom(
+            this.httpService.get(
+                this.maintainerMap[system] + 'datasets/' + dataset
+            )
+        ).then((r) => r.data);
     }
 
     public async getLatencyAnalysisDates(systemId: string): Promise<string[]> {
@@ -127,6 +165,7 @@ export class MaintainerService {
             id: number;
             name: string;
             eccGroups: string[];
+            ldevs: string[];
         };
     }> {
         const maintainerUrl = this.maintainerMap[systemId];
@@ -247,85 +286,68 @@ export class MaintainerService {
         });
     }
 
-    public async getRanges(id: string): Promise<[number, number][]> {
+    public async getRanges(
+        id: string,
+        metric?: string
+    ): Promise<[number, number][]> {
         if (!this.handlesSystem(id)) {
             return undefined;
         }
 
-        const maintainerUrl = this.maintainerMap[id];
-        return (
-            await lastValueFrom(this.httpService.get(`${maintainerUrl}ranges/`))
-        ).data;
+        const url =
+            this.maintainerMap[id] +
+            (metric ? 'datasets/' + metric : 'ranges/');
+
+        const { data } = await lastValueFrom(this.httpService.get(url));
+
+        return metric ? data.dataranges : data;
     }
 
-    public async getRecommendedVariants(
-        system: string,
-        metric: string,
-        range: [Date, Date]
-    ): Promise<{ units: string; variants: string[] }> {
-        if (!this.handlesSystem(system)) {
-            return undefined;
-        }
-
-        const maintainerUrl = this.maintainerMap[system];
-
-        const { units } = (
-            await lastValueFrom(
-                this.httpService.get(`${maintainerUrl}datasets/${metric}`)
-            )
-        ).data as { units: string };
-
-        const variants = (
-            await lastValueFrom(
-                this.httpService.post(
-                    `${maintainerUrl}features/variant_recommend`,
-                    {
-                        id: metric,
-                        from: Math.round(+range[0] / 60_000).toString(),
-                        to: Math.round(+range[1] / 60_000).toString(),
-                    }
-                )
-            )
-        ).data as string[];
-
-        return { units, variants };
-    }
-
-    public async getExtremalVariants(
+    public async recommendVariants(
         system: string,
         metric: string,
         range: [Date, Date],
-        filter: `${'top' | 'bot'}-${number}`
-    ): Promise<{ units: string; variants: string[] }> {
+        extremals?: {
+            filter: `${'top' | 'bot'}-${number}`;
+            variants?: string[];
+        }
+    ): Promise<string[]> {
         if (!this.handlesSystem(system)) {
             return undefined;
         }
 
-        const maintainerUrl = this.maintainerMap[system];
+        let url = this.maintainerMap[system];
+        const [from, to] = range.map((d) => Math.round(+d / 60_000).toString());
+        let trail = {};
 
-        const { units } = (
-            await lastValueFrom(
-                this.httpService.get(`${maintainerUrl}datasets/${metric}`)
-            )
-        ).data as { units: string };
+        if (extremals) {
+            const { filter, variants } = extremals;
+            const [_agg, _count] = filter.split('-');
 
-        const variants = (
+            trail = {
+                agg: _agg[0].toUpperCase() + _agg.slice(1),
+                count: Number.parseInt(_count),
+                ...(variants ? { variants } : {}),
+            };
+            url += 'extremals';
+        } else {
+            url += 'features/variant_recommend';
+        }
+
+        return (
             await lastValueFrom(
-                this.httpService.post(`${maintainerUrl}extremals`, {
+                this.httpService.post(url, {
+                    ...trail,
                     id: metric,
-                    from: Math.round(+range[0] / 60_000).toString(),
-                    to: Math.round(+range[1] / 60_000).toString(),
-                    agg: filter.startsWith('bot') ? 'Bot' : 'Top',
-                    count: Number.parseInt(filter.split('-')[1]),
+                    from,
+                    to,
                 })
             )
-        ).data as string[];
-
-        return { units, variants };
+        ).data;
     }
 
     public async getMaintainerData(
-        id: string,
+        system: string,
         metric: string,
         durationOrRange: number | [Date, Date],
         options?: {
@@ -337,50 +359,38 @@ export class MaintainerService {
         units: string;
         data: [number, ...number[]][];
     }> {
-        if (!this.handlesSystem(id)) {
+        if (!this.handlesSystem(system)) {
             return undefined;
         }
 
-        const maintainerUrl = this.maintainerMap[id];
+        const maintainerUrl = this.maintainerMap[system];
 
-        const { dataranges, units } = (
-            await lastValueFrom(
-                this.httpService.get(`${maintainerUrl}datasets/${metric}`)
-            )
-        ).data as { dataranges: number[][]; yType: string; units: string };
-
-        if (dataranges.length === 0) {
-            return {
-                variants: [],
-                data: [],
-                units,
-            };
-        }
-
-        let range;
+        let range: [Date, Date];
+        let units: string;
 
         if (Array.isArray(durationOrRange)) {
-            range = durationOrRange.map((d) => Math.round(Number(d) / 60_000));
+            range = durationOrRange;
+            units = (await this.getDatasetInfo(system, metric)).units;
         } else {
-            const lastDate = dataranges.reverse()[0][1];
+            const response = (
+                await lastValueFrom(
+                    this.httpService.get(`${maintainerUrl}datasets/${metric}`)
+                )
+            ).data as { dataranges: number[][]; units: string };
 
-            range = [lastDate - durationOrRange, lastDate];
+            units = response.units;
+            const lastDate = response.dataranges.reverse()[0][1];
+
+            range = [lastDate - durationOrRange, lastDate].map(
+                (i) => new Date(i * 60_000)
+            ) as [Date, Date];
         }
 
+        // TODO: use maintainer autorecommendation instead
         const variants =
             options?.variants ??
-            (
-                await lastValueFrom(
-                    this.httpService.post(
-                        `${maintainerUrl}features/variant_recommend`,
-                        {
-                            id: metric,
-                            from: range[0].toString(),
-                            to: range[1].toString(),
-                        }
-                    )
-                )
-            ).data;
+            (await this.recommendVariants(system, metric, range));
+        const [from, to] = range.map((d) => Math.round(+d / 60_000).toString());
 
         const data = (
             await lastValueFrom(
@@ -388,16 +398,14 @@ export class MaintainerService {
                     `${maintainerUrl}bulkload_json/${metric}`,
                     {
                         variants,
-                        from: range[0].toString(),
-                        to: range[1].toString(),
+                        from,
+                        to,
                         op: options?.op,
                     }
                     // { responseType: 'arraybuffer' }
                 )
             )
         ).data;
-
-        // console.log(data);
 
         return {
             variants: options?.op ? [options.op] : variants,

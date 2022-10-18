@@ -37,6 +37,7 @@ const getMapFromQuery = (
 };
 
 const filterRegex = /^(top|bot)-(\d+)$/;
+const customMetricRegex = /\$(\w+)@(pool)-(\w+)/;
 
 const getFilterFromQuery = (
     query: string,
@@ -149,13 +150,11 @@ export class MaintainerCacheService {
         console.log('Precaching compat data');
 
         // ! for debugging: '2022-09-10 10:30'
-        const range = [
-            dayjs().startOf('day').subtract(1, 'month'),
-            dayjs().startOf('minute'),
-        ].map((a) => a.toDate()) as [Date, Date];
+        const rangeStart = dayjs().startOf('day').subtract(1, 'month').toDate();
 
         console.time('precache');
 
+        // Process systems in parallel
         await PromisePool.withConcurrency(
             this.config.getMaxParallel() ?? cpus().length
         )
@@ -170,25 +169,33 @@ export class MaintainerCacheService {
 
                 console.time(system);
 
+                // Process metrics sequentially
                 for (const pre of precachable) {
                     const key = getCacheKey(system, pre.metric, pre);
 
-                    console.time(key);
-
                     try {
-                        const { units, variants: underlyingVariants } =
-                            await (pre.filter
-                                ? this.maintainerService.getExtremalVariants(
-                                      system,
-                                      pre.metric,
-                                      range,
-                                      pre.filter
-                                  )
-                                : this.maintainerService.getRecommendedVariants(
-                                      system,
-                                      pre.metric,
-                                      range
-                                  ));
+                        let avail = await this.maintainerService
+                            .getRanges(system, pre.metric)
+                            .then((r) => {
+                                console.log(r);
+                                return r.reverse()[0]?.at(1);
+                            });
+                        if (!avail) continue;
+                        avail *= 60_000;
+
+                        if (+rangeStart > avail) continue;
+                        const range: [Date, Date] = [
+                            rangeStart[0],
+                            new Date(avail),
+                        ];
+
+                        const underlyingVariants =
+                            await this.maintainerService.recommendVariants(
+                                system,
+                                pre.metric,
+                                range,
+                                pre.filter ? { filter: pre.filter } : undefined
+                            );
 
                         underlyingVariants.sort();
                         const variants = pre.map
@@ -204,6 +211,13 @@ export class MaintainerCacheService {
                                     variants: true,
                                 },
                             });
+
+                        const units = (
+                            await this.maintainerService.getDatasetInfo(
+                                system,
+                                pre.metric
+                            )
+                        ).units;
 
                         if (
                             existing &&
@@ -351,22 +365,21 @@ export class MaintainerCacheService {
             ? undefined
             : await prisma.maintainerCacheEntry.findUnique({
                   where: { key: getCacheKey(system, metric, qp) },
+                  include: {
+                      data: {
+                          where: {
+                              timestamp: { gte: range[0], lte: range[1] },
+                          },
+                          select: { values: true },
+                          orderBy: { timestamp: 'asc' },
+                      },
+                  },
               });
 
-        if (!ignoreCache)
-            console.log(`cache ${cacheEntry ? 'hit' : 'MISS'} for ${metric}`);
-
         if (cacheEntry && cacheEntry.from <= range[0]) {
-            const data = (
-                await prisma.maintainerCacheRows.findMany({
-                    where: {
-                        entryKey: cacheEntry.key,
-                        timestamp: { gte: range[0], lte: range[1] },
-                    },
-                    select: { values: true },
-                    orderBy: { timestamp: 'asc' },
-                })
-            ).map(({ values }) => values as [number, ...number[]]);
+            const data = cacheEntry.data.map(
+                ({ values }) => values as [number, ...number[]]
+            );
 
             return {
                 variants: cacheEntry.variants,
@@ -378,20 +391,54 @@ export class MaintainerCacheService {
         if (!ignoreCache)
             console.warn(`cache MISS for ${metric};${qp.map};${qp.filter}`);
 
+        // TODO: detect custom metrics
+        let resp;
+
+        let variants: string[] | undefined = qp.variants;
+
+        const matches = metric.match(customMetricRegex);
+        if (matches) {
+            const [, _metric, mode, params] = matches;
+
+            metric = _metric;
+
+            switch (mode) {
+                case 'pool':
+                    variants = await this.maintainerService
+                        .getPoolInfo(system)
+                        .then((p) =>
+                            p[params].ldevs.map((l) => l.toUpperCase() + 'X')
+                        );
+
+                    if (qp.filter) {
+                        variants =
+                            await this.maintainerService.recommendVariants(
+                                system,
+                                metric,
+                                range,
+                                { filter: qp.filter as 'top-1', variants }
+                            );
+                    }
+                    break;
+                default:
+                    throw new Error(`Unknown mode '${mode}'`);
+            }
+        }
+
         if (['avg', 'sum'].includes(qp.map) && !qp.filter) {
             return await this.maintainerService.getMaintainerData(
                 system,
                 metric,
                 range,
-                { op: qp.map as 'avg' | 'sum' }
+                { op: qp.map as 'avg' | 'sum', variants }
             );
         }
 
-        let resp = await this.maintainerService.getMaintainerData(
+        resp = await this.maintainerService.getMaintainerData(
             system,
             metric,
             range,
-            { variants: qp.variants }
+            { variants }
         );
 
         const filter = getFilterFromQuery(qp.filter, resp);

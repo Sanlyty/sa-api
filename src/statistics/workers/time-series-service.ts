@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
+import dayjs = require('dayjs');
 import { MetricType } from '../../collector/enums/metric-type.enum';
 import { MaintainerService } from '../../collector/services/maintainer.service';
 import prisma from '../../prisma';
@@ -11,8 +12,8 @@ const FILL_IN_DAYS = 90;
 const addDays = (date: Date, days: number) =>
     new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 
-const toDateString = (date: Date) =>
-    `${date.getFullYear()}-${date.getMonth() + 1}-${date.getDate()}`;
+const toDateString = (date: dayjs.Dayjs) =>
+    `${date.year()}-${date.month() + 1}-${date.date()}`;
 
 @Injectable()
 export class TimeSeriesService {
@@ -102,10 +103,10 @@ export class TimeSeriesService {
                         x: { gte: addDays(new Date(), -FILL_IN_DAYS) },
                     },
                 })
-            ).map((d) => toDateString(d.x));
+            ).map((d) => toDateString(dayjs(d.x)));
 
             day: for (let i = 0; i < FILL_IN_DAYS; i++) {
-                const date = addDays(new Date(), -i);
+                const date = dayjs().subtract(i, 'days');
 
                 if (existingDates.includes(toDateString(date))) continue;
 
@@ -116,7 +117,7 @@ export class TimeSeriesService {
                         await this.maintainerService.getMaintainerData(
                             system,
                             variant,
-                            [new Date(date), addDays(date, 1)]
+                            [date.toDate(), date.add(1, 'day').toDate()]
                         );
 
                     if (response.data.length === 0) continue day;
@@ -133,7 +134,7 @@ export class TimeSeriesService {
                     }
                 }
 
-                const x = addDays(date, 0);
+                const x = date.startOf('day').toDate();
                 await prisma.timeSeries.upsert({
                     where: { variant_x: { x, variant } },
                     create: { x, y, variant },
