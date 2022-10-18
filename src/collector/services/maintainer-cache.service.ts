@@ -150,7 +150,10 @@ export class MaintainerCacheService {
         console.log('Precaching compat data');
 
         // ! for debugging: '2022-09-10 10:30'
-        const rangeStart = dayjs().startOf('day').subtract(1, 'month').toDate();
+        const rangeStart = dayjs('2022-09-10 10:30')
+            .startOf('day')
+            .subtract(1, 'month')
+            .toDate();
 
         console.time('precache');
 
@@ -173,19 +176,17 @@ export class MaintainerCacheService {
                 for (const pre of precachable) {
                     const key = getCacheKey(system, pre.metric, pre);
 
-                    try {
-                        let avail = await this.maintainerService
-                            .getRanges(system, pre.metric)
-                            .then((r) => {
-                                console.log(r);
-                                return r.reverse()[0]?.at(1);
-                            });
-                        if (!avail) continue;
-                        avail *= 60_000;
+                    console.time(key);
 
-                        if (+rangeStart > avail) continue;
+                    try {
+                        const avail = await this.maintainerService
+                            .getRanges(system, pre.metric)
+                            .then((r) => r.reverse()[0]?.at(1));
+                        if (!avail) continue;
+
+                        if (rangeStart > avail) continue;
                         const range: [Date, Date] = [
-                            rangeStart[0],
+                            rangeStart,
                             new Date(avail),
                         ];
 
@@ -249,14 +250,14 @@ export class MaintainerCacheService {
                             },
                         });
 
-                        for (let i = 0; !pre.chunked || i === 0; ++i) {
+                        for (let i = 0; pre.chunked || i === 0; ++i) {
                             const start = dayjs(range[0]).add(i, 'weeks');
 
                             if (start >= dayjs(range[1])) break;
 
                             const _range = [
                                 start,
-                                pre.chunked
+                                !pre.chunked
                                     ? dayjs(range[1])
                                     : dayjs.min(
                                           dayjs(range[1]),
@@ -391,9 +392,7 @@ export class MaintainerCacheService {
         if (!ignoreCache)
             console.warn(`cache MISS for ${metric};${qp.map};${qp.filter}`);
 
-        // TODO: detect custom metrics
         let resp;
-
         let variants: string[] | undefined = qp.variants;
 
         const matches = metric.match(customMetricRegex);

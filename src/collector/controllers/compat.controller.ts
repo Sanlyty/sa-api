@@ -48,7 +48,7 @@ export class CompatibilityController {
         @Param('systemName') systemName
     ): Promise<[number, number][]> {
         return (await this.maintainerService.getRanges(systemName)).map(
-            (tuple) => tuple.map((d) => d * 60_000) as [number, number]
+            (tuple) => tuple.map((d) => +d) as [number, number]
         );
     }
 

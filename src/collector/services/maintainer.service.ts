@@ -289,7 +289,7 @@ export class MaintainerService {
     public async getRanges(
         id: string,
         metric?: string
-    ): Promise<[number, number][]> {
+    ): Promise<[Date, Date][]> {
         if (!this.handlesSystem(id)) {
             return undefined;
         }
@@ -300,7 +300,9 @@ export class MaintainerService {
 
         const { data } = await lastValueFrom(this.httpService.get(url));
 
-        return metric ? data.dataranges : data;
+        return (metric ? data.dataranges : data).map((d) =>
+            d.map((d) => new Date(d * 60_000))
+        );
     }
 
     public async recommendVariants(
