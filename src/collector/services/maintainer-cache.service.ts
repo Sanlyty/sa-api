@@ -85,17 +85,6 @@ const precachable: {
     { metric: 'LDEV_Write_Hit', map: 'avg' },
     { metric: 'LDEV_Read_Hit', map: 'avg' },
 
-    {
-        metric: 'LDEV_Read_Response',
-        filter: 'top-10',
-        resolution: 4,
-    },
-    {
-        metric: 'LDEV_Write_Response',
-        filter: 'top-10',
-        resolution: 4,
-    },
-
     { metric: 'PHY_Short_MP', resolution: 5 },
     { metric: 'PHY_Short_MP', map: 'avg' },
     { metric: 'PHY_Short_MP', map: 'perc-1' },
@@ -120,6 +109,17 @@ const precachable: {
     { metric: 'PHY_Short_MPU_HIE' },
     { metric: 'PHY_Short_Write_Pending_Rate' },
     { metric: 'PHY_Short_Cache_Usage_Rate_Each_of_MPU' },
+
+    {
+        metric: 'LDEV_Read_Response',
+        filter: 'top-10',
+        resolution: 4,
+    },
+    {
+        metric: 'LDEV_Write_Response',
+        filter: 'top-10',
+        resolution: 4,
+    },
 ];
 
 const arraysEqual = <T>(a: T[], b: T[]): boolean => {
@@ -341,7 +341,10 @@ export class MaintainerCacheService {
                                     prisma.maintainerCacheRows.createMany({
                                         data: data.slice(
                                             i * window,
-                                            (i + 1) * window
+                                            Math.min(
+                                                (i + 1) * window,
+                                                data.length
+                                            )
                                         ),
                                     })
                                 )
