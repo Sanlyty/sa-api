@@ -143,7 +143,7 @@ export class MaintainerCacheService {
         this.precache();
     }
 
-    @Cron('0 0 */6 * * *')
+    @Cron('0 */15 * * * *')
     public async precache() {
         if (!this.config.getShouldPrefetch()) return;
 
