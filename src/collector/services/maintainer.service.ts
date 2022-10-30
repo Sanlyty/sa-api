@@ -381,7 +381,9 @@ export class MaintainerService {
             ).data as { dataranges: number[][]; units: string };
 
             units = response.units;
-            const lastDate = response.dataranges.reverse()[0][1];
+            const lastDate =
+                response.dataranges.reverse()[0]?.[1] ??
+                new Date().getTime() / 60_000;
 
             range = [lastDate - durationOrRange, lastDate].map(
                 (i) => new Date(i * 60_000)
