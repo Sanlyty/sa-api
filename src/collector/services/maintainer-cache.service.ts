@@ -136,6 +136,8 @@ const getCacheKey = (
 
 @Injectable()
 export class MaintainerCacheService {
+    private vmwCache: Record<string, { variant: string }[]> = {};
+
     constructor(
         private maintainerService: MaintainerService,
         private config: ConfigService
@@ -168,6 +170,30 @@ export class MaintainerCacheService {
                 }
 
                 console.time(system);
+
+                {
+                    const metricName = 'VMW_NET_TOTAL';
+                    const ranges = await this.maintainerService.getRanges(
+                        system,
+                        metricName
+                    );
+
+                    if (ranges.length === 0) this.vmwCache[system] = [];
+                    else {
+                        const result =
+                            await this.maintainerService.getMaintainerData(
+                                system,
+                                metricName,
+                                60 * 24 * 7
+                            );
+
+                        this.vmwCache[system] = result.variants
+                            .filter((_, i) =>
+                                result.data.some((row) => row[i + 1] > 0)
+                            )
+                            .map((variant) => ({ variant }));
+                    }
+                }
 
                 // Process metrics sequentially
                 for (const pre of precachable) {
@@ -365,6 +391,10 @@ export class MaintainerCacheService {
             });
 
         console.timeEnd('precache');
+    }
+
+    public getVmws(system: string): { variant: string }[] {
+        return this.vmwCache[system] ?? [];
     }
 
     public async getData(

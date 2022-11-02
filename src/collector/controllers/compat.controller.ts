@@ -22,6 +22,13 @@ export class CompatibilityController {
         private maintainerCache: MaintainerCacheService
     ) {}
 
+    @Get(':systemName/VmwCapacity')
+    public async vmwCapacity(
+        @Param('systemName') systemName
+    ): Promise<{ variant: string }[]> {
+        return this.maintainerCache.getVmws(systemName);
+    }
+
     @Get(':systemName/ChbInfo')
     public async chbInfo(
         @Param('systemName') systemName
