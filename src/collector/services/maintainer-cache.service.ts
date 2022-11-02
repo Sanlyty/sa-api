@@ -78,48 +78,31 @@ const precachable: {
     { metric: 'HG_D2CR_Trans', map: 'sum' },
     { metric: 'HG_D2CS_Trans', map: 'sum' },
 
-    { metric: 'LDEV_Write_Response', map: 'avg' },
+    { metric: 'LDEV_Read_BlockSize', map: 'avg' },
+    { metric: 'LDEV_Read_Hit', map: 'avg' },
     { metric: 'LDEV_Read_Response', map: 'avg' },
     { metric: 'LDEV_Write_BlockSize', map: 'avg' },
-    { metric: 'LDEV_Read_BlockSize', map: 'avg' },
     { metric: 'LDEV_Write_Hit', map: 'avg' },
-    { metric: 'LDEV_Read_Hit', map: 'avg' },
+    { metric: 'LDEV_Write_Response', map: 'avg' },
 
     { metric: 'PHY_Short_MP', resolution: 5 },
     { metric: 'PHY_Short_MP', map: 'avg' },
-    { metric: 'PHY_Short_MP', map: 'perc-1' },
     { metric: 'PHY_Short_PG' },
     { metric: 'PHY_Short_PG', map: 'avg' },
-    { metric: 'PHY_Short_PG', map: 'perc-1' },
     { metric: 'PHY_Short_Write_Pending_Rate_Each_of_MPU' },
     { metric: 'PHY_Short_Write_Pending_Rate_Each_of_MPU', map: 'avg' },
-    { metric: 'PHY_Short_Write_Pending_Rate_Each_of_MPU', map: 'perc-1' },
 
     { metric: 'HG_TransRate', map: 'sum' },
     { metric: 'HG_TransRate', filter: 'top-10' },
     { metric: 'HG_IOPS', map: 'sum' },
     { metric: 'HG_IOPS', filter: 'top-10' },
-    { metric: 'HG_Read_Response', map: 'sum' },
     { metric: 'HG_Read_Response', filter: 'top-10' },
-    { metric: 'HG_Write_Response', map: 'sum' },
     { metric: 'HG_Write_Response', filter: 'top-10' },
 
     { metric: 'CHB_KBPS' },
     { metric: 'PHY_Short_HIE_ISW', resolution: 5 },
     { metric: 'PHY_Short_MPU_HIE' },
     { metric: 'PHY_Short_Write_Pending_Rate' },
-    { metric: 'PHY_Short_Cache_Usage_Rate_Each_of_MPU' },
-
-    {
-        metric: 'LDEV_Read_Response',
-        filter: 'top-10',
-        resolution: 4,
-    },
-    {
-        metric: 'LDEV_Write_Response',
-        filter: 'top-10',
-        resolution: 4,
-    },
 ];
 
 const arraysEqual = <T>(a: T[], b: T[]): boolean => {
@@ -152,7 +135,10 @@ export class MaintainerCacheService {
         console.log('Precaching compat data');
 
         // ! for debugging: '2022-09-10 10:30'
-        const rangeStart = dayjs().startOf('day').subtract(1, 'month').toDate();
+        const rangeStart = dayjs('2022-09-10 10:30')
+            .startOf('day')
+            .subtract(1, 'month')
+            .toDate();
 
         console.time('precache');
 
