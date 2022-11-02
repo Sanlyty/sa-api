@@ -237,6 +237,7 @@ export class MaintainerCacheService {
                                 from: range[0],
                                 to: range[1],
                                 variants,
+                                units,
                                 data: {
                                     deleteMany: !existing
                                         ? {}
