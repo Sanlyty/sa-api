@@ -171,29 +171,7 @@ export class MaintainerCacheService {
 
                 console.time(system);
 
-                {
-                    const metricName = 'VMW_NET_TOTAL';
-                    const ranges = await this.maintainerService.getRanges(
-                        system,
-                        metricName
-                    );
-
-                    if (ranges.length === 0) this.vmwCache[system] = [];
-                    else {
-                        const result =
-                            await this.maintainerService.getMaintainerData(
-                                system,
-                                metricName,
-                                60 * 24 * 7
-                            );
-
-                        this.vmwCache[system] = result.variants
-                            .filter((_, i) =>
-                                result.data.some((row) => row[i + 1] > 0)
-                            )
-                            .map((variant) => ({ variant }));
-                    }
-                }
+                this.vmwCache[system] = await this.getVmws(system, true);
 
                 // Process metrics sequentially
                 for (const pre of precachable) {
@@ -393,8 +371,30 @@ export class MaintainerCacheService {
         console.timeEnd('precache');
     }
 
-    public getVmws(system: string): { variant: string }[] {
-        return this.vmwCache[system] ?? [];
+    public async getVmws(
+        system: string,
+        ignoreCache?: boolean
+    ): Promise<{ variant: string }[]> {
+        if (!ignoreCache && system in this.vmwCache)
+            return this.vmwCache[system];
+
+        const metricName = 'VMW_NET_TOTAL';
+        const ranges = await this.maintainerService.getRanges(
+            system,
+            metricName
+        );
+
+        if (ranges.length === 0) return [];
+
+        const result = await this.maintainerService.getMaintainerData(
+            system,
+            metricName,
+            60 * 24 * 7
+        );
+
+        return result.variants
+            .filter((_, i) => result.data.some((row) => row[i + 1] > 0))
+            .map((variant) => ({ variant }));
     }
 
     public async getData(

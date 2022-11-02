@@ -26,7 +26,7 @@ export class CompatibilityController {
     public async vmwCapacity(
         @Param('systemName') systemName
     ): Promise<{ variant: string }[]> {
-        return this.maintainerCache.getVmws(systemName);
+        return await this.maintainerCache.getVmws(systemName);
     }
 
     @Get(':systemName/ChbInfo')
