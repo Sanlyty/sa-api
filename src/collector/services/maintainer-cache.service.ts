@@ -120,6 +120,7 @@ const getCacheKey = (
 @Injectable()
 export class MaintainerCacheService {
     private vmwCache: Record<string, { variant: string }[]> = {};
+    private locked = false;
 
     constructor(
         private maintainerService: MaintainerService,
@@ -130,8 +131,9 @@ export class MaintainerCacheService {
 
     @Cron('0 */15 * * * *')
     public async precache() {
-        if (!this.config.getShouldPrefetch()) return;
+        if (!this.config.getShouldPrefetch() || this.locked) return;
 
+        this.locked = true;
         console.log('Precaching compat data');
 
         // ! for debugging: '2022-09-10 10:30'
@@ -352,6 +354,7 @@ export class MaintainerCacheService {
             });
 
         console.timeEnd('precache');
+        this.locked = false;
     }
 
     public async getVmws(
