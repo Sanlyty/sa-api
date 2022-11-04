@@ -27,11 +27,11 @@ export class NotificationService {
             }
         }
 
-        if (this.trySetMailer()) {
+        if (this.trySetMailer() && this.config.getSmtpMaintenanceTo()?.length) {
             this.mailer
                 .sendMail({
                     from: this.config.getSmtpFrom(),
-                    to: this.config.getSmtpTo(),
+                    to: this.config.getSmtpMaintenanceTo(),
                     subject: `Storage Analytics Notification`,
                     html: `The notification service has been started`,
                 })
