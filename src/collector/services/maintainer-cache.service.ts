@@ -136,225 +136,237 @@ export class MaintainerCacheService {
         this.locked = true;
         console.log('Precaching compat data');
 
-        // ! for debugging: '2022-09-10 10:30'
-        const rangeStart = dayjs().startOf('day').subtract(1, 'month').toDate();
+        // ! for debugging: '2022-09-20 10:30'
+        const rangeStart = dayjs('2022-09-20 10:30')
+            .startOf('day')
+            .subtract(1, 'month')
+            .toDate();
 
         console.time('precache');
 
-        // Process systems in parallel
-        await PromisePool.withConcurrency(
-            this.config.getMaxParallel() ?? cpus().length
-        )
-            .for(this.maintainerService.getHandledSystems())
-            .process(async (system) => {
-                if (!(await this.maintainerService.getStatus(system))) {
-                    console.warn(
-                        `Skipping precache for ${system} as it is not available`
-                    );
-                    return;
-                }
+        try {
+            // Process systems in parallel
+            await PromisePool.withConcurrency(
+                this.config.getMaxParallel() ?? cpus().length
+            )
+                .for(this.maintainerService.getHandledSystems())
+                .process(async (system) => {
+                    if (!(await this.maintainerService.getStatus(system))) {
+                        console.warn(
+                            `Skipping precache for ${system} as it is not available`
+                        );
+                        return;
+                    }
 
-                console.time(system);
+                    console.time(system);
 
-                this.vmwCache[system] = await this.getVmws(system, true);
+                    this.vmwCache[system] = await this.getVmws(system, true);
 
-                // Process metrics sequentially
-                for (const pre of precachable) {
-                    const key = getCacheKey(system, pre.metric, pre);
+                    // Process metrics sequentially
+                    for (const pre of precachable) {
+                        const key = getCacheKey(system, pre.metric, pre);
 
-                    console.time(key);
+                        console.time(key);
 
-                    try {
-                        const avail = await this.maintainerService
-                            .getRanges(system, pre.metric)
-                            .then((r) => r.reverse()[0]?.at(1));
-                        if (!avail) continue;
+                        try {
+                            const avail = await this.maintainerService
+                                .getRanges(system, pre.metric)
+                                .then((r) => r.reverse()[0]?.at(1));
+                            if (!avail) continue;
 
-                        if (rangeStart > avail) continue;
-                        const range: [Date, Date] = [
-                            rangeStart,
-                            new Date(avail),
-                        ];
+                            if (rangeStart > avail) continue;
+                            const range: [Date, Date] = [
+                                rangeStart,
+                                new Date(avail),
+                            ];
 
-                        const underlyingVariants =
-                            await this.maintainerService.recommendVariants(
-                                system,
-                                pre.metric,
-                                range,
-                                pre.filter ? { filter: pre.filter } : undefined
-                            );
+                            const underlyingVariants =
+                                await this.maintainerService.recommendVariants(
+                                    system,
+                                    pre.metric,
+                                    range,
+                                    pre.filter
+                                        ? { filter: pre.filter }
+                                        : undefined
+                                );
 
-                        underlyingVariants.sort();
-                        const variants = pre.map
-                            ? [pre.map]
-                            : underlyingVariants;
+                            underlyingVariants.sort();
+                            const variants = pre.map
+                                ? [pre.map]
+                                : underlyingVariants;
 
-                        let existing =
-                            await prisma.maintainerCacheEntry.findUnique({
-                                where: { key },
-                                select: {
-                                    from: true,
-                                    to: true,
-                                    variants: true,
-                                },
-                            });
+                            let existing =
+                                await prisma.maintainerCacheEntry.findUnique({
+                                    where: { key },
+                                    select: {
+                                        from: true,
+                                        to: true,
+                                        variants: true,
+                                    },
+                                });
 
-                        const units = (
-                            await this.maintainerService.getDatasetInfo(
-                                system,
-                                pre.metric
-                            )
-                        ).units;
-
-                        if (
-                            existing &&
-                            !arraysEqual(existing.variants, variants)
-                        ) {
-                            existing = undefined;
-                        }
-
-                        await prisma.maintainerCacheEntry.upsert({
-                            where: { key },
-                            create: {
-                                key,
-                                from: range[0],
-                                to: range[1],
-                                units,
-                                variants,
-                            },
-                            update: {
-                                from: range[0],
-                                to: range[1],
-                                variants,
-                                units,
-                                data: {
-                                    deleteMany: !existing
-                                        ? {}
-                                        : {
-                                              timestamp: { lt: range[0] },
-                                          },
-                                },
-                            },
-                        });
-
-                        for (let i = 0; pre.chunked || i === 0; ++i) {
-                            const start = dayjs(range[0]).add(i, 'weeks');
-
-                            if (start >= dayjs(range[1])) break;
-
-                            const _range = [
-                                start,
-                                !pre.chunked
-                                    ? dayjs(range[1])
-                                    : dayjs.min(
-                                          dayjs(range[1]),
-                                          start.add(6, 'days').endOf('day')
-                                      ),
-                            ] as [dayjs.Dayjs, dayjs.Dayjs];
+                            const units = (
+                                await this.maintainerService.getDatasetInfo(
+                                    system,
+                                    pre.metric
+                                )
+                            ).units;
 
                             if (
                                 existing &&
-                                +_range[0] <= +existing.to &&
-                                +_range[1] >= +existing.from
+                                !arraysEqual(existing.variants, variants)
                             ) {
-                                if (
-                                    +_range[0] >= +existing.from &&
-                                    +_range[1] <= +existing.to
-                                )
-                                    continue;
-                                else if (
-                                    +_range[0] <= +existing.from &&
-                                    +_range[1] >= +existing.to
-                                ) {
-                                    // Nothing yet
-                                } else if (+_range[0] < +existing.from)
-                                    _range[1] = dayjs(existing.from);
-                                else if (+_range[1] > +existing.to)
-                                    _range[0] = dayjs(existing.to);
+                                existing = undefined;
                             }
 
-                            const result = await this.getData(
-                                system,
-                                pre.metric,
-                                _range.map((d) => d.toDate()) as [Date, Date],
-                                {
-                                    map: pre.map,
-                                    filter: pre.filter,
-                                    variants: underlyingVariants,
-                                },
-                                true
-                            );
-
-                            if (pre.resolution) {
-                                let prev = 0;
-                                result.data = result.data.filter(([time]) => {
-                                    if (time - prev >= pre.resolution) {
-                                        prev = time;
-                                        return true;
-                                    }
-
-                                    return false;
-                                });
-                            }
-
-                            const data = result.data
-                                .filter(([, val]) => val !== undefined)
-                                .map((row) => ({
-                                    timestamp: new Date(row[0] * 60_000),
-                                    values: row,
-                                    entryKey: key,
-                                }));
-
-                            console.time(key + ':db_write');
-                            await prisma.maintainerCacheEntry.update({
+                            await prisma.maintainerCacheEntry.upsert({
                                 where: { key },
-                                data: {
-                                    variants: result.variants,
+                                create: {
+                                    key,
+                                    from: range[0],
+                                    to: range[1],
+                                    units,
+                                    variants,
+                                },
+                                update: {
+                                    from: range[0],
+                                    to: range[1],
+                                    variants,
+                                    units,
                                     data: {
-                                        deleteMany: {
-                                            timestamp: {
-                                                gte: _range[0].toDate(),
-                                                lte: _range[1].toDate(),
-                                            },
-                                        },
+                                        deleteMany: !existing
+                                            ? {}
+                                            : {
+                                                  timestamp: { lt: range[0] },
+                                              },
                                     },
                                 },
                             });
 
-                            const window = 60 * 24;
-                            await Promise.all(
-                                [
-                                    ...new Array(
-                                        Math.ceil(data.length / window)
-                                    ).keys(),
-                                ].map((i) =>
-                                    prisma.maintainerCacheRows.createMany({
-                                        data: data.slice(
-                                            i * window,
-                                            Math.min(
-                                                (i + 1) * window,
-                                                data.length
-                                            )
-                                        ),
-                                    })
-                                )
+                            for (let i = 0; pre.chunked || i === 0; ++i) {
+                                const start = dayjs(range[0]).add(i, 'weeks');
+
+                                if (start >= dayjs(range[1])) break;
+
+                                const _range = [
+                                    start,
+                                    !pre.chunked
+                                        ? dayjs(range[1])
+                                        : dayjs.min(
+                                              dayjs(range[1]),
+                                              start.add(6, 'days').endOf('day')
+                                          ),
+                                ] as [dayjs.Dayjs, dayjs.Dayjs];
+
+                                if (
+                                    existing &&
+                                    +_range[0] <= +existing.to &&
+                                    +_range[1] >= +existing.from
+                                ) {
+                                    if (
+                                        +_range[0] >= +existing.from &&
+                                        +_range[1] <= +existing.to
+                                    )
+                                        continue;
+                                    else if (
+                                        +_range[0] <= +existing.from &&
+                                        +_range[1] >= +existing.to
+                                    ) {
+                                        // Nothing yet
+                                    } else if (+_range[0] < +existing.from)
+                                        _range[1] = dayjs(existing.from);
+                                    else if (+_range[1] > +existing.to)
+                                        _range[0] = dayjs(existing.to);
+                                }
+
+                                const result = await this.getData(
+                                    system,
+                                    pre.metric,
+                                    _range.map((d) => d.toDate()) as [
+                                        Date,
+                                        Date
+                                    ],
+                                    {
+                                        map: pre.map,
+                                        filter: pre.filter,
+                                        variants: underlyingVariants,
+                                    },
+                                    true
+                                );
+
+                                if (pre.resolution) {
+                                    let prev = 0;
+                                    result.data = result.data.filter(
+                                        ([time]) => {
+                                            if (time - prev >= pre.resolution) {
+                                                prev = time;
+                                                return true;
+                                            }
+
+                                            return false;
+                                        }
+                                    );
+                                }
+
+                                const data = result.data
+                                    .filter(([, val]) => val !== undefined)
+                                    .map((row) => ({
+                                        timestamp: new Date(row[0] * 60_000),
+                                        values: row,
+                                        entryKey: key,
+                                    }));
+
+                                console.time(key + ':db_write');
+                                await prisma.maintainerCacheEntry.update({
+                                    where: { key },
+                                    data: {
+                                        variants: result.variants,
+                                        data: {
+                                            deleteMany: {
+                                                timestamp: {
+                                                    gte: _range[0].toDate(),
+                                                    lte: _range[1].toDate(),
+                                                },
+                                            },
+                                        },
+                                    },
+                                });
+
+                                const window = 60 * 24;
+                                await Promise.all(
+                                    [
+                                        ...new Array(
+                                            Math.ceil(data.length / window)
+                                        ).keys(),
+                                    ].map((i) =>
+                                        prisma.maintainerCacheRows.createMany({
+                                            data: data.slice(
+                                                i * window,
+                                                Math.min(
+                                                    (i + 1) * window,
+                                                    data.length
+                                                )
+                                            ),
+                                        })
+                                    )
+                                );
+                                console.timeEnd(key + ':db_write');
+                            }
+                        } catch (err) {
+                            console.error(
+                                `Failed to precache ${pre.metric} for ${system}: ${err?.message}`
                             );
-                            console.timeEnd(key + ':db_write');
                         }
-                    } catch (err) {
-                        console.error(
-                            `Failed to precache ${pre.metric} for ${system}: ${err?.message}`
-                        );
+
+                        console.timeEnd(key);
                     }
 
-                    console.timeEnd(key);
-                }
-
-                console.timeEnd(system);
-            });
-
-        console.timeEnd('precache');
-        this.locked = false;
+                    console.timeEnd(system);
+                });
+        } finally {
+            console.timeEnd('precache');
+            this.locked = false;
+        }
     }
 
     public async getVmws(
