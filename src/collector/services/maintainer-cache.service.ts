@@ -137,10 +137,7 @@ export class MaintainerCacheService {
         console.log('Precaching compat data');
 
         // ! for debugging: '2022-09-20 10:30'
-        const rangeStart = dayjs('2022-09-20 10:30')
-            .startOf('day')
-            .subtract(1, 'month')
-            .toDate();
+        const rangeStart = dayjs().startOf('day').subtract(1, 'month').toDate();
 
         console.time('precache');
 
