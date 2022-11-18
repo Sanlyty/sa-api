@@ -10,9 +10,9 @@ if (env.CONF_SA_API_PATH) {
     path.join(env.CONF_SA_API_PATH, 'application.env');
 }
 
-const ensureExists = (key: string, warnOnly?: boolean) => {
+const ensureExists = (key: string, sev: 'error' | 'warn') => {
     if (!env[key]?.length) {
-        if (warnOnly) {
+        if (sev === 'warn') {
             console.warn(`Missing env var '${key}'`);
         } else {
             console.error(
@@ -26,8 +26,8 @@ const ensureExists = (key: string, warnOnly?: boolean) => {
 @Injectable()
 export class ConfigService {
     constructor() {
-        ensureExists('DATABASE_URL');
-        ensureExists('CONF_MAINTAINER_MAP', true);
+        ensureExists('DATABASE_URL', 'error');
+        ensureExists('CONF_MAINTAINER_MAP', 'warn');
     }
 
     getDatabaseSettings() {
@@ -86,6 +86,10 @@ export class ConfigService {
 
     getShouldPrefetch(): boolean {
         return env.SHOULD_PREFETCH?.toLowerCase() === 'true';
+    }
+
+    getDebugPrefetchDate(): string | undefined {
+        return env.DEBUG_PREFETCH_DATE;
     }
 
     getMaxParallel(): number | undefined {
