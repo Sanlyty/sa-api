@@ -84,8 +84,8 @@ export class ConfigService {
         return env.smtp_maintenance_to?.split(',');
     }
 
-    getShouldPrefetch(): boolean {
-        return env.SHOULD_PREFETCH?.toLowerCase() === 'true';
+    getCachePath(): string | undefined {
+        return env.CACHE_PATH;
     }
 
     getDebugPrefetchDate(): string | undefined {

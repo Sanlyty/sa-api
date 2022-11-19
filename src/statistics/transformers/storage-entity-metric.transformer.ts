@@ -126,7 +126,7 @@ export class StorageEntityMetricTransformer {
         }
 
         if ('peak' in metric) {
-            metricDetail.peak = metric['peak'];
+            metricDetail.peak = metric['peak'] as number;
         }
 
         if ('startTime' in metric) {
