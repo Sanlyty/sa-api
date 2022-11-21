@@ -6,15 +6,16 @@ import * as dayjsIsoWeek from 'dayjs/plugin/isoWeek';
 import * as dayjsMinMax from 'dayjs/plugin/minMax';
 
 import PromisePool from '@supercharge/promise-pool';
+import { pool } from 'workerpool';
 
 import type { MaintainerDataResponse } from '../controllers/compat.controller';
 import { ConfigService } from '../../config/config.service';
-import { createEncoderStream, createDecoderStream, encode, decode } from 'lz4';
+import { encode, decode } from 'lz4';
 
 // Node
 import { cpus } from 'os';
 import * as fs from 'fs/promises';
-import { createWriteStream, existsSync } from 'fs';
+import { existsSync } from 'fs';
 import { join } from 'path';
 
 dayjs.extend(dayjsIsoWeek);
@@ -136,6 +137,7 @@ const getCacheKey = (
 export class MaintainerCacheService {
     private vmwCache: Record<string, { variant: string }[]> = {};
     private locked = false;
+    private pool = pool(__dirname + '/maintainer-cache.worker.mjs');
 
     constructor(
         private maintainerService: MaintainerService,
@@ -346,11 +348,8 @@ export class MaintainerCacheService {
     }
 
     private async readFromBlob(dir: string): Promise<[number, ...number[]][]> {
-        console.time(dir + '_decode');
-        const d = decode(await fs.readFile(join(dir, BlobFile)));
-        console.timeEnd(dir + '_decode');
-
-        return JSON.parse(d.toString());
+        const file = await fs.readFile(join(dir, BlobFile));
+        return await this.pool.exec('load', [file, dir]);
     }
 
     private async writeToBlob(
