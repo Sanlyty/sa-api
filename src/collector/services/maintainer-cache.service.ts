@@ -9,19 +9,19 @@ import PromisePool from '@supercharge/promise-pool';
 
 import type { MaintainerDataResponse } from '../controllers/compat.controller';
 import { ConfigService } from '../../config/config.service';
-import prisma from '../../prisma';
+import { createEncoderStream, createDecoderStream, encode, decode } from 'lz4';
 
 // Node
 import { cpus } from 'os';
 import * as fs from 'fs/promises';
-import { existsSync } from 'fs';
+import { createWriteStream, existsSync } from 'fs';
 import { join } from 'path';
-import * as zlib from 'zlib';
 
 dayjs.extend(dayjsIsoWeek);
 dayjs.extend(dayjsMinMax);
 
 const SummaryFile = 'meta.json';
+const BlobFile = 'data.blob';
 
 const percRegex = /^perc-(\d+(?:\.\d+)?)$/;
 const getMapFromQuery = (
@@ -70,11 +70,9 @@ const getFilterFromQuery = (
 };
 
 type CacheEntry = {
-    avail: number;
-    start: number;
+    range: [number, number];
     variants: string[];
     units: string;
-    trailingDay: string;
 };
 
 const precachable: {
@@ -112,6 +110,8 @@ const precachable: {
     { metric: 'HG_TransRate', filter: 'top-10' },
     { metric: 'HG_IOPS', map: 'sum' },
     { metric: 'HG_IOPS', filter: 'top-10' },
+    { metric: 'HG_Read_IOPS', map: 'sum' },
+    { metric: 'HG_Write_IOPS', map: 'sum' },
     { metric: 'HG_Read_Response', filter: 'top-10' },
     { metric: 'HG_Write_Response', filter: 'top-10' },
 
@@ -198,7 +198,8 @@ export class MaintainerCacheService {
             const metricRoot = join(this.cachePath, system, key);
             await fs.mkdir(metricRoot, { recursive: true });
 
-            console.time(key);
+            const timeKey = system + ';' + key;
+            console.time(timeKey);
 
             try {
                 const avail = await this.maintainerService
@@ -221,7 +222,7 @@ export class MaintainerCacheService {
                     : undefined;
 
                 // Ignore if existing more recent
-                if (cacheEntry && cacheEntry.avail >= +avail) continue;
+                if (cacheEntry && cacheEntry.range[1] >= +avail) continue;
 
                 const range: [Date, Date] = [
                     rangeStart.toDate(),
@@ -246,94 +247,64 @@ export class MaintainerCacheService {
                     )
                 ).units;
 
-                if (cacheEntry) {
-                    if (!arraysEqual(cacheEntry.variants, variants)) {
-                        // Invalidate all data if variants missmatched
-                        await Promise.all(
-                            (
-                                await fs.readdir(metricRoot)
-                            ).map((f) => fs.unlink(f))
-                        );
-                    } else {
-                        // Drop the incomplete day
-                        await fs.unlink(
-                            join(metricRoot, cacheEntry.trailingDay)
-                        );
+                let fetchFrom = rangeStart.clone();
+                let data: [number, ...number[]][] = [];
+                if (cacheEntry && arraysEqual(cacheEntry.variants, variants)) {
+                    fetchFrom = dayjs.max(
+                        fetchFrom,
+                        dayjs(cacheEntry.range[1] + 60_000)
+                    );
+                    data = await this.readFromBlob(metricRoot);
 
-                        // Drop the redundant leading days
-                        const files = await fs.readdir(metricRoot);
-                        await Promise.all(
-                            files
-                                .filter((f) => {
-                                    const d = dayjs(f);
-
-                                    return (
-                                        d.isValid() &&
-                                        d.isBefore(rangeStart.startOf('day'))
-                                    );
-                                })
-                                .map((f) => fs.unlink(f))
-                        );
+                    if (+rangeStart > +cacheEntry.range[0]) {
+                        const start = +cacheEntry.range[0] / 60_000;
+                        data = data.filter(([stamp]) => stamp >= start);
                     }
                 }
 
-                for (
-                    let day = rangeStart.startOf('day');
-                    +day < +avail;
-                    day = day.add(1, 'day')
-                ) {
-                    if (existsSync(join(metricRoot, day.format('YYYY-MM-DD'))))
-                        continue;
+                console.time(timeKey + '_fetch');
+                const result = await this.getData(
+                    system,
+                    pre.metric,
+                    [fetchFrom.toDate(), avail],
+                    {
+                        map: pre.map,
+                        filter: pre.filter,
+                        variants: underlyingVariants,
+                    },
+                    true
+                );
 
-                    const result = await this.getData(
-                        system,
-                        pre.metric,
-                        [day.toDate(), day.endOf('day').toDate()],
-                        {
-                            map: pre.map,
-                            filter: pre.filter,
-                            variants: underlyingVariants,
-                        },
-                        true
-                    );
+                console.timeEnd(timeKey + '_fetch');
+                if (pre.resolution) {
+                    let prev = 0;
+                    result.data = result.data.filter(([time]) => {
+                        if (time - prev >= pre.resolution) {
+                            prev = time;
+                            return true;
+                        }
 
-                    if (pre.resolution) {
-                        let prev = 0;
-                        result.data = result.data.filter(([time]) => {
-                            if (time - prev >= pre.resolution) {
-                                prev = time;
-                                return true;
-                            }
-
-                            return false;
-                        });
-                    }
-
-                    const data = result.data
-                        .filter(([, val]) => val !== undefined)
-                        .map((row) => ({
-                            timestamp: new Date(row[0] * 60_000),
-                            values: row,
-                            entryKey: key,
-                        }));
-
-                    await fs.writeFile(
-                        join(metricRoot, day.format('YYYY-MM-DD')),
-                        await zlib.brotliCompressSync(JSON.stringify(data), {
-                            chunkSize: 64 * 1024,
-                        })
-                    );
+                        return false;
+                    });
                 }
+
+                data.push(
+                    ...result.data.filter(([, val]) => val !== undefined)
+                );
+
+                console.time(timeKey + '_write');
+
+                await this.writeToBlob(metricRoot, data);
+
+                console.timeEnd(timeKey + '_write');
 
                 await fs.writeFile(
                     summaryPath,
                     JSON.stringify({
+                        range: [+rangeStart, +avail],
                         variants,
-                        avail: +avail,
                         units,
-                        trailingDay: dayjs(avail).format('YYYY-MM-DD'),
-                        start: +rangeStart,
-                    }), //satisfies CacheEntry
+                    }), //  satisfies CacheEntry
                     { encoding: 'utf-8' }
                 );
             } catch (err) {
@@ -342,7 +313,7 @@ export class MaintainerCacheService {
                 );
             }
 
-            console.timeEnd(key);
+            console.timeEnd(timeKey);
         }
 
         console.timeEnd(system);
@@ -374,6 +345,24 @@ export class MaintainerCacheService {
             .map((variant) => ({ variant }));
     }
 
+    private async readFromBlob(dir: string): Promise<[number, ...number[]][]> {
+        console.time(dir + '_decode');
+        const d = decode(await fs.readFile(join(dir, BlobFile)));
+        console.timeEnd(dir + '_decode');
+
+        return JSON.parse(d.toString());
+    }
+
+    private async writeToBlob(
+        dir: string,
+        data: [number, ...number[]][]
+    ): Promise<void> {
+        await fs.writeFile(
+            join(dir, BlobFile),
+            encode(Buffer.from(JSON.stringify(data)))
+        );
+    }
+
     public async getData(
         system: string,
         metric: string,
@@ -393,45 +382,25 @@ export class MaintainerCacheService {
             getCacheKey(metric, qp),
             SummaryFile
         );
-        const cacheEntry: CacheEntry = ignoreCache
-            ? undefined
-            : JSON.parse(await fs.readFile(summaryPath, { encoding: 'utf-8' }));
+        const cacheEntry: CacheEntry =
+            ignoreCache || !existsSync(summaryPath)
+                ? undefined
+                : JSON.parse(
+                      await fs.readFile(summaryPath, { encoding: 'utf-8' })
+                  );
 
-        if (cacheEntry && cacheEntry.start <= +range[0]) {
-            const data = [];
-
-            for (
-                let day = dayjs(range[0]).startOf('day');
-                +day < +range[1];
-                day = day.add(1, 'day')
-            ) {
-                const path = join(
-                    this.cachePath,
-                    system,
-                    getCacheKey(metric, qp),
-                    day.format('YYYY-MM-DD')
-                );
-
-                if (!existsSync(path)) continue;
-
-                const fileData: [number, ...number[]][] = JSON.parse(
-                    zlib
-                        .brotliDecompressSync(await fs.readFile(path))
-                        .toString()
-                );
-
-                for (const row of fileData) {
-                    if (row[0] * 60_000 < +range[0]) continue;
-                    if (row[0] * 60_000 > +range[1]) break;
-
-                    data.push(row);
-                }
-            }
+        if (cacheEntry && cacheEntry.range[0] <= +range[0]) {
+            const from = +range[0] / 60_000;
+            const to = +range[1] / 60_000;
 
             return {
                 variants: cacheEntry.variants,
                 units: cacheEntry.units,
-                data,
+                data: await this.readFromBlob(
+                    join(this.cachePath, system, getCacheKey(metric, qp))
+                ).then((d) =>
+                    d.filter(([stamp]) => stamp >= from && stamp <= to)
+                ),
             };
         }
 
