@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as dotenv from 'dotenv';
-import path = require('path');
+import path from 'path';
 
 const { env } = process;
 

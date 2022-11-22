@@ -3,9 +3,7 @@ import { System } from './System';
 import { ComponentExternal } from './ComponentExternal';
 
 export class SystemDetail extends System {
-  id: number;
-  name: string;
-  metrics: SystemMetric[];
-  ports: SystemDetail[];
-  externals: ComponentExternal[];
+    public metrics: SystemMetric[];
+    public ports: SystemDetail[];
+    public externals: ComponentExternal[];
 }

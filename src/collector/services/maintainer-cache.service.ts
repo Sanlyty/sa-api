@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { MaintainerService } from './maintainer.service';
-import * as dayjs from 'dayjs';
-import * as dayjsIsoWeek from 'dayjs/plugin/isoWeek';
-import * as dayjsMinMax from 'dayjs/plugin/minMax';
+import dayjs from 'dayjs';
+import dayjsIsoWeek from 'dayjs/plugin/isoWeek';
+import dayjsMinMax from 'dayjs/plugin/minMax';
 
 import PromisePool from '@supercharge/promise-pool';
 import { pool } from 'workerpool';
@@ -22,7 +22,6 @@ dayjs.extend(dayjsIsoWeek);
 dayjs.extend(dayjsMinMax);
 
 const SummaryFile = 'meta.json';
-const BlobFile = 'data.blob';
 
 const percRegex = /^perc-(\d+(?:\.\d+)?)$/;
 const getMapFromQuery = (
@@ -137,7 +136,7 @@ const getCacheKey = (
 export class MaintainerCacheService {
     private vmwCache: Record<string, { variant: string }[]> = {};
     private locked = false;
-    private pool = pool(__dirname + '/maintainer-cache.worker.mjs');
+    private pool = pool(__dirname + '/maintainer-cache.worker.js');
 
     constructor(
         private maintainerService: MaintainerService,
@@ -251,20 +250,20 @@ export class MaintainerCacheService {
 
                 let fetchFrom = rangeStart.clone();
                 let data: [number, ...number[]][] = [];
+
+                // Load existing data from cache
                 if (cacheEntry && arraysEqual(cacheEntry.variants, variants)) {
                     fetchFrom = dayjs.max(
                         fetchFrom,
                         dayjs(cacheEntry.range[1] + 60_000)
                     );
-                    data = await this.readFromBlob(metricRoot);
 
-                    if (+rangeStart > +cacheEntry.range[0]) {
-                        const start = +cacheEntry.range[0] / 60_000;
-                        data = data.filter(([stamp]) => stamp >= start);
-                    }
+                    data = await this.readFromBlob(metricRoot, [
+                        rangeStart.toDate(),
+                        new Date(cacheEntry.range[1]),
+                    ]);
                 }
 
-                console.time(timeKey + '_fetch');
                 const result = await this.getData(
                     system,
                     pre.metric,
@@ -277,7 +276,6 @@ export class MaintainerCacheService {
                     true
                 );
 
-                console.timeEnd(timeKey + '_fetch');
                 if (pre.resolution) {
                     let prev = 0;
                     result.data = result.data.filter(([time]) => {
@@ -294,11 +292,17 @@ export class MaintainerCacheService {
                     ...result.data.filter(([, val]) => val !== undefined)
                 );
 
-                console.time(timeKey + '_write');
-
+                // remove previous blobs
+                await fs
+                    .readdir(metricRoot)
+                    .then((dir) =>
+                        Promise.all(
+                            dir
+                                .filter((f) => f.endsWith('.blob'))
+                                .map((f) => fs.unlink(f))
+                        )
+                    );
                 await this.writeToBlob(metricRoot, data);
-
-                console.timeEnd(timeKey + '_write');
 
                 await fs.writeFile(
                     summaryPath,
@@ -347,18 +351,65 @@ export class MaintainerCacheService {
             .map((variant) => ({ variant }));
     }
 
-    private async readFromBlob(dir: string): Promise<[number, ...number[]][]> {
-        const file = await fs.readFile(join(dir, BlobFile));
-        return await this.pool.exec('load', [file, dir]);
+    private async readFromBlob(
+        dir: string,
+        range?: [Date, Date]
+    ): Promise<[number, ...number[]][]> {
+        const chunkMap: Record<string, [number, number]> = JSON.parse(
+            await fs.readFile(join(dir, 'blobmap.json'), { encoding: 'utf-8' })
+        );
+        const result: [number, ...number[]][] = [];
+
+        for (const [fname, [fFrom, fTo]] of Object.entries(chunkMap)) {
+            if (range && (+range[1] < fFrom || +range[0] > fTo)) continue;
+
+            const data = await this.pool.exec('load', [
+                await fs.readFile(join(dir, fname)),
+                dir,
+            ]);
+
+            if (range && (+range[1] < fTo || +range[0] > fFrom)) {
+                const [a, b] = [+range[0] / 60_000, +range[1] / 60_000];
+                result.push(
+                    ...data.filter(([stamp]) => stamp >= a && stamp <= b)
+                );
+            } else {
+                result.push(...data);
+            }
+        }
+
+        return result;
     }
 
     private async writeToBlob(
         dir: string,
         data: [number, ...number[]][]
     ): Promise<void> {
+        const chunking = 60 * 24 * 5;
+        const chunkMap: Record<string, [number, number]> = {};
+
+        for (let i = 0; i < Math.ceil(data.length / chunking); ++i) {
+            const [fromIdx, toIdx] = [
+                i * chunking,
+                Math.min((i + 1) * chunking, data.length),
+            ];
+            const fileName = `${i}.blob`;
+
+            chunkMap[fileName] = [
+                data[fromIdx][0] * 60_000,
+                data[toIdx - 1][0] * 60_000,
+            ];
+
+            await fs.writeFile(
+                join(dir, fileName),
+                encode(Buffer.from(JSON.stringify(data.slice(fromIdx, toIdx))))
+            );
+        }
+
         await fs.writeFile(
-            join(dir, BlobFile),
-            encode(Buffer.from(JSON.stringify(data)))
+            join(dir, 'blobmap.json'),
+            JSON.stringify(chunkMap),
+            { encoding: 'utf-8' }
         );
     }
 
@@ -389,16 +440,12 @@ export class MaintainerCacheService {
                   );
 
         if (cacheEntry && cacheEntry.range[0] <= +range[0]) {
-            const from = +range[0] / 60_000;
-            const to = +range[1] / 60_000;
-
             return {
                 variants: cacheEntry.variants,
                 units: cacheEntry.units,
                 data: await this.readFromBlob(
-                    join(this.cachePath, system, getCacheKey(metric, qp))
-                ).then((d) =>
-                    d.filter(([stamp]) => stamp >= from && stamp <= to)
+                    join(this.cachePath, system, getCacheKey(metric, qp)),
+                    range
                 ),
             };
         }

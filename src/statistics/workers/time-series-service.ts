@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import dayjs = require('dayjs');
+import dayjs from 'dayjs';
 import { MetricType } from '../../collector/enums/metric-type.enum';
-import { MaintainerService } from '../../collector/services/maintainer.service';
+import { MaintainerService } from '../../collector/services/maintainer.service.js';
 import prisma from '../../prisma';
 import { GraphDataService, ServiceType } from '../services/graph-data.service';
 import { TypeMappingUtils } from '../utils/type-mapping.utils';
