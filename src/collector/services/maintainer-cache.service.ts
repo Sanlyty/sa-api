@@ -10,7 +10,7 @@ import { pool } from 'workerpool';
 
 import type { MaintainerDataResponse } from '../controllers/compat.controller';
 import { ConfigService } from '../../config/config.service';
-import { encode, decode } from 'lz4';
+import { encode } from 'lz4';
 
 // Node
 import { cpus } from 'os';
