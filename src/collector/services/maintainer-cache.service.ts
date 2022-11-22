@@ -22,6 +22,8 @@ dayjs.extend(dayjsIsoWeek);
 dayjs.extend(dayjsMinMax);
 
 const SummaryFile = 'meta.json';
+const MapFile = 'blobmap.json';
+const BlobFile = (i: number) => `${i}.blob`;
 
 const percRegex = /^perc-(\d+(?:\.\d+)?)$/;
 const getMapFromQuery = (
@@ -152,7 +154,7 @@ export class MaintainerCacheService {
 
     @Cron('0 */15 * * * *')
     public async precache() {
-        if (!this.cachePath || this.locked) return;
+        if (this.locked || !this.cachePath) return;
 
         this.locked = true;
         console.log('Precaching compat data');
@@ -356,7 +358,7 @@ export class MaintainerCacheService {
         range?: [Date, Date]
     ): Promise<[number, ...number[]][]> {
         const chunkMap: Record<string, [number, number]> = JSON.parse(
-            await fs.readFile(join(dir, 'blobmap.json'), { encoding: 'utf-8' })
+            await fs.readFile(join(dir, MapFile), { encoding: 'utf-8' })
         );
         const result: [number, ...number[]][] = [];
 
@@ -365,7 +367,6 @@ export class MaintainerCacheService {
 
             const data = await this.pool.exec('load', [
                 await fs.readFile(join(dir, fname)),
-                dir,
             ]);
 
             if (range && (+range[1] < fTo || +range[0] > fFrom)) {
@@ -393,7 +394,7 @@ export class MaintainerCacheService {
                 i * chunking,
                 Math.min((i + 1) * chunking, data.length),
             ];
-            const fileName = `${i}.blob`;
+            const fileName = BlobFile(i);
 
             chunkMap[fileName] = [
                 data[fromIdx][0] * 60_000,
@@ -406,11 +407,9 @@ export class MaintainerCacheService {
             );
         }
 
-        await fs.writeFile(
-            join(dir, 'blobmap.json'),
-            JSON.stringify(chunkMap),
-            { encoding: 'utf-8' }
-        );
+        await fs.writeFile(join(dir, MapFile), JSON.stringify(chunkMap), {
+            encoding: 'utf-8',
+        });
     }
 
     public async getData(
