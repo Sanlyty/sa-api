@@ -7,7 +7,7 @@
     "experimentalDecorators": true,
     "target": "es6",
     "lib": [ "ESNext" ],
-    "allowJs": false,
+    "allowJs": true,
     "sourceMap": true,
     "outDir": "./dist",
     "baseUrl": "./",

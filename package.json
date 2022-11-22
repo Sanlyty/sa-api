@@ -9,7 +9,7 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint src/",
     "start": "ts-node -r tsconfig-paths/register src/main.ts",
-    "prestart:prod": "rimraf dist && npm run build && cp src/collector/services/maintainer-cache.worker.mjs dist/src/collector/services/maintainer-cache.worker.mjs",
+    "prestart:prod": "rimraf dist && npm run build",
     "start:prod": "node dist/src/main.js",
     "start:debug": "nodemon --config nodemon-debug.json",
     "test": "jest",
