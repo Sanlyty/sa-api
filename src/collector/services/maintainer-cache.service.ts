@@ -301,7 +301,7 @@ export class MaintainerCacheService {
                         Promise.all(
                             dir
                                 .filter((f) => f.endsWith('.blob'))
-                                .map((f) => fs.unlink(f))
+                                .map((f) => fs.unlink(join(metricRoot, f)))
                         )
                     );
                 await this.writeToBlob(metricRoot, data);
