@@ -563,7 +563,9 @@ export class DataCenterService {
                 {
                     fromTime: new Date(Number(fromDate)),
                     toTime: new Date(Number(toDate)),
-                    maintained: this.maintainerService.getHandledSystems(),
+                    maintained: await this.maintainerService.getHandledSystems([
+                        'hp',
+                    ]),
                 }
             );
 

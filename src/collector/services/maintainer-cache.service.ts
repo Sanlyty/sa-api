@@ -170,7 +170,7 @@ export class MaintainerCacheService {
             await PromisePool.withConcurrency(
                 this.config.getMaxParallel() ?? cpus().length
             )
-                .for(this.maintainerService.getHandledSystems())
+                .for(await this.maintainerService.getHandledSystems(['hp']))
                 .process(async (system) =>
                     this.prefetchSystem(system, rangeStart)
                 );

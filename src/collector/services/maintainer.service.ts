@@ -15,10 +15,19 @@ type Dataset = {
     yType: string;
 };
 
+type MaintainerInfo = {
+    type: string;
+    version: string;
+    features: string[];
+};
+
+type MaintainerInfoWithDatasets = MaintainerInfo & { datasets: Dataset[] };
+
 @Injectable()
 export class MaintainerService {
     private maintainerMap: Record<string, string> = {};
-    private datasets: Record<string, Dataset[]> = {};
+    private maintainerInfo: Record<string, MaintainerInfoWithDatasets> = {};
+    private loaded;
 
     constructor(private httpService: HttpService) {
         this.maintainerMap = process.env.CONF_MAINTAINER_MAP
@@ -29,16 +38,28 @@ export class MaintainerService {
               )
             : {};
 
-        this.updateDatasets();
+        this.loaded = this.updateDatasets();
     }
 
     @Cron('0 0 * * *')
     public async updateDatasets() {
         await Promise.all(
             Object.entries(this.maintainerMap).map(async ([system, url]) => {
-                this.datasets[system] = await lastValueFrom(
-                    this.httpService.get(url + 'datasets')
-                ).then((d) => d.data);
+                try {
+                    const info = await lastValueFrom(
+                        this.httpService.get(url)
+                    ).then((d) => d.data);
+                    const datasets = await lastValueFrom(
+                        this.httpService.get(url + 'datasets')
+                    ).then((d) => d.data);
+
+                    this.maintainerInfo[system] = {
+                        ...info,
+                        datasets,
+                    };
+                } catch (_) {
+                    delete this.maintainerInfo[system];
+                }
             })
         );
     }
@@ -47,15 +68,17 @@ export class MaintainerService {
         return id in this.maintainerMap;
     }
 
-    public getHandledSystems(): string[] {
-        return Object.keys(this.maintainerMap);
+    public async getHandledSystems(ofType: string[]): Promise<string[]> {
+        await this.loaded;
+
+        return Object.entries(this.maintainerInfo)
+            .map(([k, v]) => (ofType.includes(v.type) ? k : undefined))
+            .filter((v) => v);
     }
 
     public async getStatus(
         system: string
-    ): Promise<
-        { type: string; version: string; features: string[] } | undefined
-    > {
+    ): Promise<MaintainerInfo | undefined> {
         if (!this.handlesSystem(system)) return undefined;
 
         let response;
@@ -75,7 +98,9 @@ export class MaintainerService {
         system: string,
         dataset: string
     ): Promise<Dataset | undefined> {
-        const local = this.datasets[system]?.find((d) => d.id === dataset);
+        const local = this.maintainerInfo[system]?.datasets.find(
+            (d) => d.id === dataset
+        );
 
         if (local) return local;
 
@@ -295,8 +320,7 @@ export class MaintainerService {
         }
 
         const url =
-            this.maintainerMap[id] +
-            (metric ? 'datasets/' + metric : 'ranges/');
+            this.maintainerMap[id] + (metric ? 'datasets/' + metric : 'ranges');
 
         const { data } = await lastValueFrom(this.httpService.get(url));
 

@@ -109,7 +109,9 @@ export class NotificationService {
         const poolMap = await this.getPoolMap();
         const now = new Date().getTime();
 
-        for (const system of this.maintainerService.getHandledSystems()) {
+        for (const system of await this.maintainerService.getHandledSystems([
+            'hp',
+        ])) {
             if (!(await this.maintainerService.getStatus(system))) {
                 console.warn(
                     `Skipping PG notifications for ${system} as it is not available`

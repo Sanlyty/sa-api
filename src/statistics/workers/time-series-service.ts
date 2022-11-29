@@ -82,7 +82,9 @@ export class TimeSeriesService {
 
         const systems = [];
 
-        for (const system of this.maintainerService.getHandledSystems()) {
+        for (const system of await this.maintainerService.getHandledSystems([
+            'hp',
+        ])) {
             if (!(await this.maintainerService.getStatus(system))) {
                 console.warn(
                     `Skipping time series sum for ${system} as it is not available`
