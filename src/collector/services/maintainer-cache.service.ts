@@ -322,7 +322,7 @@ export class MaintainerCacheService {
                         range: [+rangeStart, +avail],
                         variants,
                         units,
-                    }), //  satisfies CacheEntry
+                    } satisfies CacheEntry),
                     { encoding: 'utf-8' }
                 );
             } catch (err) {

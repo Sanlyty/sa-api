@@ -87,7 +87,10 @@ export class MaintainerService {
                 ws,
             };
 
-            this.events.emit('updated', { ...info, system } as UpdatedInfo);
+            this.events.emit('updated', {
+                ...info,
+                system,
+            } satisfies UpdatedInfo);
             return true;
         } catch (_) {
             if (system in this.maintainerInfo) {
