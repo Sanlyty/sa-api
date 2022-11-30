@@ -40,8 +40,8 @@ export class NotificationService {
                 .catch(console.error);
         }
 
-        this.maintainerService.loaded.then(() => {
-            this.parityGroupAlert().catch(console.error);
+        this.maintainerService.loaded.then(async () => {
+            await this.parityGroupAlert().catch(console.error);
 
             this.maintainerService.events.on('updated', (data: UpdatedInfo) => {
                 if (data.type === 'hp') {

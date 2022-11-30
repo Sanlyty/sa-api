@@ -23,8 +23,8 @@ export class PortConnectivityService {
         private maintainerService: MaintainerService,
         private storageEntityService: StorageEntityService
     ) {
-        this.maintainerService.loaded.then(() => {
-            this.getThroughput();
+        this.maintainerService.loaded.then(async () => {
+            await this.getThroughput();
             this.maintainerService.events.on('updated', (info: UpdatedInfo) => {
                 if (info.type === 'hp') {
                     this.updateDataFor(info.system);
