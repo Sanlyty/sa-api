@@ -4,10 +4,10 @@ import { readFileSync } from 'fs';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { lastValueFrom } from 'rxjs';
 import { MetricType } from '../enums/metric-type.enum';
-import { Cron } from '@nestjs/schedule';
-// import { load_data } from '../../../libreader/pkg/libreader';
+import { WebSocket as WSClient } from 'ws';
+import { EventEmitter } from 'events';
 
-type Dataset = {
+export type Dataset = {
     id: string;
     category: string[];
     units: string;
@@ -15,19 +15,27 @@ type Dataset = {
     yType: string;
 };
 
-type MaintainerInfo = {
+export type MaintainerInfo = {
     type: string;
     version: string;
     features: string[];
 };
 
-type MaintainerInfoWithDatasets = MaintainerInfo & { datasets: Dataset[] };
+type MaintainerInfoInternal = MaintainerInfo & {
+    datasets: Dataset[];
+    ws: WSClient;
+};
+
+export type UpdatedInfo = MaintainerInfo & {
+    system: string;
+};
 
 @Injectable()
 export class MaintainerService {
     private maintainerMap: Record<string, string> = {};
-    private maintainerInfo: Record<string, MaintainerInfoWithDatasets> = {};
-    private loaded;
+    private maintainerInfo: Record<string, MaintainerInfoInternal> = {};
+    public events: EventEmitter = new EventEmitter();
+    public loaded: Promise<void>;
 
     constructor(private httpService: HttpService) {
         this.maintainerMap = process.env.CONF_MAINTAINER_MAP
@@ -38,39 +46,70 @@ export class MaintainerService {
               )
             : {};
 
-        this.loaded = this.updateDatasets();
+        this.loaded = Promise.all(
+            Object.keys(this.maintainerMap).map((s) =>
+                this.updateMaintainerInfo(s)
+            )
+        ).then(() => {
+            this.events.emit('loaded');
+        });
     }
 
-    @Cron('0 0 * * *')
-    public async updateDatasets() {
-        await Promise.all(
-            Object.entries(this.maintainerMap).map(async ([system, url]) => {
-                try {
-                    const info = await lastValueFrom(
-                        this.httpService.get(url)
-                    ).then((d) => d.data);
-                    const datasets = await lastValueFrom(
-                        this.httpService.get(url + 'datasets')
-                    ).then((d) => d.data);
+    private async updateMaintainerInfo(system: string) {
+        const url = this.maintainerMap[system];
 
-                    this.maintainerInfo[system] = {
-                        ...info,
-                        datasets,
-                    };
-                } catch (_) {
+        try {
+            const info = await lastValueFrom(this.httpService.get(url)).then(
+                (d) => d.data
+            );
+            const datasets = await lastValueFrom(
+                this.httpService.get(url + 'datasets')
+            ).then((d) => d.data);
+
+            let ws = this.maintainerInfo[system]?.ws;
+
+            if (!ws) {
+                console.debug('connecting to', url);
+                ws = new WSClient(url.replace('http', 'ws') + 'connect');
+                ws.on('message', () => {
+                    console.debug(`received update message from ${system}`);
+                    this.updateMaintainerInfo(system);
+                });
+                ws.on('close', () => {
                     delete this.maintainerInfo[system];
+                    this.updateMaintainerInfo(system);
+                });
+            }
+
+            this.maintainerInfo[system] = {
+                ...info,
+                datasets,
+                ws,
+            };
+
+            this.events.emit('updated', { ...info, system } as UpdatedInfo);
+            return true;
+        } catch (_) {
+            if (system in this.maintainerInfo) {
+                try {
+                    this.maintainerInfo[system].ws.removeAllListeners().close();
+                } catch (err) {
+                    console.error('Failed to unregister ws', err);
                 }
-            })
-        );
+                delete this.maintainerInfo[system];
+            }
+
+            setTimeout(() => this.updateMaintainerInfo(system), 10_000);
+        }
+
+        return false;
     }
 
     public handlesSystem(id: string): boolean {
         return id in this.maintainerMap;
     }
 
-    public async getHandledSystems(ofType: string[]): Promise<string[]> {
-        await this.loaded;
-
+    public getHandledSystems(ofType: string[]): string[] {
         return Object.entries(this.maintainerInfo)
             .map(([k, v]) => (ofType.includes(v.type) ? k : undefined))
             .filter((v) => v);

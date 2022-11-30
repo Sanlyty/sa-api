@@ -1,6 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
-import { MaintainerService } from './maintainer.service';
+import { MaintainerService, type UpdatedInfo } from './maintainer.service';
 import dayjs from 'dayjs';
 import dayjsIsoWeek from 'dayjs/plugin/isoWeek';
 import dayjsMinMax from 'dayjs/plugin/minMax';
@@ -137,14 +136,21 @@ const getCacheKey = (
 @Injectable()
 export class MaintainerCacheService {
     private vmwCache: Record<string, { variant: string }[]> = {};
-    private locked = false;
+    private systemLocks: Record<string, boolean> = {};
     private pool = pool(__dirname + '/maintainer-cache.worker.js');
 
     constructor(
         private maintainerService: MaintainerService,
         private config: ConfigService
     ) {
-        this.precache();
+        this.maintainerService.loaded.then(async () => {
+            await this.precache();
+            this.maintainerService.events.on('updated', (info: UpdatedInfo) => {
+                if (info.type === 'hp') {
+                    this.prefetchSystem(info.system, this.prefferedRangeStart);
+                }
+            });
+        });
     }
 
     get cachePath(): string {
@@ -152,18 +158,20 @@ export class MaintainerCacheService {
         return this.config.getCachePath()!;
     }
 
-    @Cron('0 */15 * * * *')
-    public async precache() {
-        if (this.locked || !this.cachePath) return;
-
-        this.locked = true;
-        console.log('Precaching compat data');
-
-        const rangeStart = dayjs(this.config.getDebugPrefetchDate())
+    get prefferedRangeStart(): dayjs.Dayjs {
+        return dayjs(this.config.getDebugPrefetchDate())
             .startOf('day')
             .subtract(1, 'month');
+    }
 
-        console.time('precache');
+    public async precache() {
+        if (!this.cachePath) return;
+
+        console.log('Precaching compat data');
+
+        const rangeStart = this.prefferedRangeStart;
+
+        console.time('initial precache');
 
         try {
             // Process systems in parallel
@@ -175,8 +183,7 @@ export class MaintainerCacheService {
                     this.prefetchSystem(system, rangeStart)
                 );
         } finally {
-            console.timeEnd('precache');
-            this.locked = false;
+            console.timeEnd('initial precache');
         }
     }
 
@@ -190,6 +197,9 @@ export class MaintainerCacheService {
             );
             return;
         }
+
+        if (this.systemLocks[system]) return;
+        this.systemLocks[system] = true;
 
         console.time(system);
 
@@ -325,6 +335,7 @@ export class MaintainerCacheService {
         }
 
         console.timeEnd(system);
+        delete this.systemLocks[system];
     }
 
     public async getVmws(

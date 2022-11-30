@@ -1,9 +1,11 @@
-import { Cron } from '@nestjs/schedule';
 import { Injectable } from '@nestjs/common';
 import { readFileSync, writeFile, existsSync } from 'fs';
 import { createTransport, Transporter } from 'nodemailer';
 import { ConfigService } from '../../config/config.service';
-import { MaintainerService } from '../../collector/services/maintainer.service';
+import {
+    MaintainerService,
+    UpdatedInfo,
+} from '../../collector/services/maintainer.service';
 import { StorageEntityRepository } from '../../collector/repositories/storage-entity.repository';
 import { StorageEntityType } from '../../collector/dto/owner.dto';
 import { StorageEntityStatus } from '../../collector/enums/storage-entity-status.enum';
@@ -36,9 +38,18 @@ export class NotificationService {
                     html: `The notification service has been started`,
                 })
                 .catch(console.error);
-
-            this.parityGroupAlert().catch(console.error);
         }
+
+        this.maintainerService.loaded.then(() => {
+            this.parityGroupAlert().catch(console.error);
+
+            this.maintainerService.events.on('updated', (data: UpdatedInfo) => {
+                if (data.type === 'hp') {
+                    // FIXME: this should be targeted on the specific maintainer
+                    this.parityGroupAlert().catch(console.error);
+                }
+            });
+        });
     }
 
     private trySetMailer = () => {
@@ -91,7 +102,6 @@ export class NotificationService {
         return poolMap;
     };
 
-    @Cron('0 */10 * * * *')
     public async parityGroupAlert() {
         if (!this.trySetMailer()) return;
 

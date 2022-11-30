@@ -37,7 +37,8 @@
     "typeorm": "^0.2.25",
     "winston": "^3.7.2",
     "winston-daily-rotate-file": "^4.6.1",
-    "workerpool": "^6.3.1"
+    "workerpool": "^6.3.1",
+    "ws": "^8.11.0"
   },
   "devDependencies": {
     "@nestjs/swagger": "^5.2.1",
@@ -49,6 +50,7 @@
     "@types/nodemailer": "^6.4.4",
     "@types/supertest": "^2.0.10",
     "@types/workerpool": "^6.1.0",
+    "@types/ws": "^8.5.3",
     "@typescript-eslint/eslint-plugin": "^5.44.0",
     "@typescript-eslint/parser": "^5.44.0",
     "eslint": "^8.28.0",
