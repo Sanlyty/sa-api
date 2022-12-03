@@ -30,6 +30,10 @@ export class ConfigService {
         ensureExists('CONF_MAINTAINER_MAP', 'warn');
     }
 
+    getMaintainerConfPath(): string | undefined {
+        return env.CONF_MAINTAINER_MAP;
+    }
+
     getDatabaseSettings() {
         const prod = env.NODE_ENV === 'production';
 

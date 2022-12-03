@@ -1,11 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { readFileSync } from 'fs';
-import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { lastValueFrom } from 'rxjs';
-import { MetricType } from '../enums/metric-type.enum';
 import { WebSocket as WSClient } from 'ws';
 import { EventEmitter } from 'events';
+
+import { MetricType } from '../enums/metric-type.enum';
+import { StorageEntityEntity } from '../entities/storage-entity.entity';
+import { ConfigService } from '../../config/config.service';
+import { fromMins, toMins } from '../../../utils/date';
 
 export type Dataset = {
     id: string;
@@ -41,30 +44,28 @@ export class MaintainerService {
     public events: EventEmitter = new EventEmitter();
     public loaded: Promise<void>;
 
-    constructor(private httpService: HttpService) {
-        this.maintainerMap = process.env.CONF_MAINTAINER_MAP
+    constructor(
+        private httpService: HttpService,
+        private config: ConfigService
+    ) {
+        const path = config.getMaintainerConfPath();
+        this.maintainerMap = path
             ? Object.fromEntries(
-                  Object.entries(
-                      JSON.parse(
-                          readFileSync(`${process.env.CONF_MAINTAINER_MAP}`, {
-                              encoding: 'utf8',
-                          })
-                      )
-                  ).map(([k, v]) => {
-                      const parsed = new URL(v as string);
-                      if (!knownProtos.includes(parsed.protocol))
-                          throw new Error(
-                              `Invalid protocol '${parsed.protocol}'`
-                          );
+                  Object.entries(JSON.parse(readFileSync(path, 'utf8'))).map(
+                      ([k, v]) => {
+                          const parsed = new URL(v as string);
+                          if (!knownProtos.includes(parsed.protocol))
+                              throw new Error(
+                                  `Invalid protocol '${parsed.protocol}'`
+                              );
 
-                      let url = parsed.toString();
-                      if (!url.endsWith('/')) url += '/';
-                      return [k, url];
-                  })
+                          let url = parsed.toString();
+                          if (!url.endsWith('/')) url += '/';
+                          return [k, url];
+                      }
+                  )
               )
             : {};
-
-        console.log(this.maintainerMap);
 
         this.loaded = Promise.all(
             Object.keys(this.maintainerMap).map((s) =>
@@ -182,7 +183,7 @@ export class MaintainerService {
         return (
             await lastValueFrom(
                 this.httpService.post(
-                    `${maintainerUrl}features/latency_analysis_dates`
+                    maintainerUrl + 'features/latency_analysis_dates'
                 )
             )
         ).data;
@@ -199,7 +200,7 @@ export class MaintainerService {
         return (
             await lastValueFrom(
                 this.httpService.post(
-                    `${maintainerUrl}features/latency_analysis`,
+                    maintainerUrl + 'features/latency_analysis',
                     {
                         op,
                         dates,
@@ -228,7 +229,7 @@ export class MaintainerService {
 
         return (
             await lastValueFrom(
-                this.httpService.post(`${maintainerUrl}features/pg_events`, {
+                this.httpService.post(maintainerUrl + 'features/pg_events', {
                     from,
                     to,
                 })
@@ -245,7 +246,7 @@ export class MaintainerService {
 
         return (
             await lastValueFrom(
-                this.httpService.post(`${maintainerUrl}features/chb_info`)
+                this.httpService.post(maintainerUrl + 'features/chb_info')
             )
         ).data;
     }
@@ -262,7 +263,7 @@ export class MaintainerService {
 
         return (
             await lastValueFrom(
-                this.httpService.post(`${maintainerUrl}features/pool_info`)
+                this.httpService.post(maintainerUrl + 'features/pool_info')
             )
         ).data;
     }
@@ -284,7 +285,7 @@ export class MaintainerService {
 
         return (
             await lastValueFrom(
-                this.httpService.post(`${maintainerUrl}features/fe_ports`)
+                this.httpService.post(maintainerUrl + 'features/fe_ports')
             )
         ).data;
     }
@@ -298,7 +299,7 @@ export class MaintainerService {
 
         return (
             await lastValueFrom(
-                this.httpService.post(`${maintainerUrl}features/sla`, {
+                this.httpService.post(maintainerUrl + 'features/sla', {
                     from,
                     to,
                 })
@@ -389,9 +390,7 @@ export class MaintainerService {
 
         const { data } = await lastValueFrom(this.httpService.get(url));
 
-        return (metric ? data.dataranges : data).map((d) =>
-            d.map((d) => new Date(d * 60_000))
-        );
+        return (metric ? data.dataranges : data).map((d) => d.map(fromMins));
     }
 
     public async recommendVariants(
@@ -408,7 +407,7 @@ export class MaintainerService {
         }
 
         let url = this.maintainerMap[system];
-        const [from, to] = range.map((d) => Math.round(+d / 60_000).toString());
+        const [from, to] = range.map((d) => toMins(d).toString());
         let trail = {};
 
         if (extremals) {
@@ -471,19 +470,19 @@ export class MaintainerService {
 
             units = response.units;
             const lastDate =
-                response.dataranges.at(-1)?.at(1) ??
-                new Date().getTime() / 60_000;
+                response.dataranges.at(-1)?.at(1) ?? toMins(new Date());
 
-            range = [lastDate - durationOrRange, lastDate].map(
-                (i) => new Date(i * 60_000)
-            ) as [Date, Date];
+            range = [lastDate - durationOrRange, lastDate].map(fromMins) as [
+                Date,
+                Date
+            ];
         }
 
         // TODO: use maintainer autorecommendation instead
         const variants =
             options?.variants ??
             (await this.recommendVariants(system, metric, range));
-        const [from, to] = range.map((d) => Math.round(+d / 60_000).toString());
+        const [from, to] = range.map((d) => toMins(d).toString());
 
         const data = (
             await lastValueFrom(
@@ -537,7 +536,7 @@ export class MaintainerService {
         }
 
         return {
-            date: new Date(Number(data[0][0]) * 60_000),
+            date: fromMins(Number(data[0][0])),
             cols: variants.reduce(
                 (p, k, i) => ({ ...p, [k]: data[0][i + 1] }),
                 {}

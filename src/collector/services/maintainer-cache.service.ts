@@ -1,15 +1,16 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { MaintainerService, type UpdatedInfo } from './maintainer.service';
 import dayjs from 'dayjs';
 import dayjsIsoWeek from 'dayjs/plugin/isoWeek';
 import dayjsMinMax from 'dayjs/plugin/minMax';
 
 import PromisePool from '@supercharge/promise-pool';
 import { pool } from 'workerpool';
+import { encode } from 'lz4';
 
+import { MaintainerService, type UpdatedInfo } from './maintainer.service';
 import type { MaintainerDataResponse } from '../controllers/compat.controller';
 import { ConfigService } from '../../config/config.service';
-import { encode } from 'lz4';
+import { fromMins, toMins } from '../../../utils/date';
 
 // Node
 import { cpus } from 'os';
@@ -227,11 +228,7 @@ export class MaintainerCacheService {
                 const cacheEntry: CacheEntry | undefined = existsSync(
                     summaryPath
                 )
-                    ? JSON.parse(
-                          await fs.readFile(summaryPath, {
-                              encoding: 'utf-8',
-                          })
-                      )
+                    ? JSON.parse(await fs.readFile(summaryPath, 'utf-8'))
                     : undefined;
 
                 // Ignore if existing more recent
@@ -267,7 +264,7 @@ export class MaintainerCacheService {
                 if (cacheEntry && arraysEqual(cacheEntry.variants, variants)) {
                     fetchFrom = dayjs.max(
                         fetchFrom,
-                        dayjs(cacheEntry.range[1] + 60_000)
+                        dayjs(cacheEntry.range[1]).add(1, 'minute')
                     );
 
                     data = await this.readFromBlob(metricRoot, [
@@ -323,7 +320,7 @@ export class MaintainerCacheService {
                         variants,
                         units,
                     } satisfies CacheEntry),
-                    { encoding: 'utf-8' }
+                    'utf-8'
                 );
             } catch (err) {
                 console.error(
@@ -369,7 +366,7 @@ export class MaintainerCacheService {
         range?: [Date, Date]
     ): Promise<[number, ...number[]][]> {
         const chunkMap: Record<string, [number, number]> = JSON.parse(
-            await fs.readFile(join(dir, MapFile), { encoding: 'utf-8' })
+            await fs.readFile(join(dir, MapFile), 'utf-8')
         );
         const result: [number, ...number[]][] = [];
 
@@ -381,7 +378,7 @@ export class MaintainerCacheService {
             ]);
 
             if (range && (+range[1] < fTo || +range[0] > fFrom)) {
-                const [a, b] = [+range[0] / 60_000, +range[1] / 60_000];
+                const [a, b] = [toMins(range[0]), toMins(range[1])];
                 result.push(
                     ...data.filter(([stamp]) => stamp >= a && stamp <= b)
                 );
@@ -408,8 +405,8 @@ export class MaintainerCacheService {
             const fileName = BlobFile(i);
 
             chunkMap[fileName] = [
-                data[fromIdx][0] * 60_000,
-                data[toIdx - 1][0] * 60_000,
+                +fromMins(data[fromIdx][0]),
+                +fromMins(data[toIdx - 1][0]),
             ];
 
             await fs.writeFile(
@@ -418,9 +415,11 @@ export class MaintainerCacheService {
             );
         }
 
-        await fs.writeFile(join(dir, MapFile), JSON.stringify(chunkMap), {
-            encoding: 'utf-8',
-        });
+        await fs.writeFile(
+            join(dir, MapFile),
+            JSON.stringify(chunkMap),
+            'utf-8'
+        );
     }
 
     public async getData(
@@ -445,9 +444,7 @@ export class MaintainerCacheService {
         const cacheEntry: CacheEntry =
             ignoreCache || !existsSync(summaryPath)
                 ? undefined
-                : JSON.parse(
-                      await fs.readFile(summaryPath, { encoding: 'utf-8' })
-                  );
+                : JSON.parse(await fs.readFile(summaryPath, 'utf-8'));
 
         if (cacheEntry && cacheEntry.range[0] <= +range[0]) {
             return {
