@@ -8,7 +8,7 @@ import { EventEmitter } from 'events';
 import { MetricType } from '../enums/metric-type.enum';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { ConfigService } from '../../config/config.service';
-import { fromMins, toMins } from '../../../utils/date';
+import { fromMins, toMins } from '../../utils/date';
 
 export type Dataset = {
     id: string;

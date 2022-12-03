@@ -10,7 +10,7 @@ import { encode } from 'lz4';
 import { MaintainerService, type UpdatedInfo } from './maintainer.service';
 import type { MaintainerDataResponse } from '../controllers/compat.controller';
 import { ConfigService } from '../../config/config.service';
-import { fromMins, toMins } from '../../../utils/date';
+import { fromMins, toMins } from '../../utils/date';
 
 // Node
 import { cpus } from 'os';
