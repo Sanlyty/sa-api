@@ -30,21 +30,41 @@ export type UpdatedInfo = MaintainerInfo & {
     system: string;
 };
 
+/// Supported network protocols for maintainer connections
+const knownProtos = ['http:', 'https:'];
+
+// TODO: move to fetch API
 @Injectable()
 export class MaintainerService {
-    private maintainerMap: Record<string, string> = {};
+    private maintainerMap: Record<string, string>;
     private maintainerInfo: Record<string, MaintainerInfoInternal> = {};
     public events: EventEmitter = new EventEmitter();
     public loaded: Promise<void>;
 
     constructor(private httpService: HttpService) {
         this.maintainerMap = process.env.CONF_MAINTAINER_MAP
-            ? JSON.parse(
-                  readFileSync(`${process.env.CONF_MAINTAINER_MAP}`, {
-                      encoding: 'utf8',
+            ? Object.fromEntries(
+                  Object.entries(
+                      JSON.parse(
+                          readFileSync(`${process.env.CONF_MAINTAINER_MAP}`, {
+                              encoding: 'utf8',
+                          })
+                      )
+                  ).map(([k, v]) => {
+                      const parsed = new URL(v as string);
+                      if (!knownProtos.includes(parsed.protocol))
+                          throw new Error(
+                              `Invalid protocol '${parsed.protocol}'`
+                          );
+
+                      let url = parsed.toString();
+                      if (!url.endsWith('/')) url += '/';
+                      return [k, url];
                   })
               )
             : {};
+
+        console.log(this.maintainerMap);
 
         this.loaded = Promise.all(
             Object.keys(this.maintainerMap).map((s) =>
@@ -69,8 +89,11 @@ export class MaintainerService {
             let ws = this.maintainerInfo[system]?.ws;
 
             if (!ws) {
-                console.debug('connecting to', url);
-                ws = new WSClient(url.replace('http', 'ws') + 'connect');
+                const wsUrl = new URL('connect', url);
+                wsUrl.protocol = wsUrl.protocol.replace('http', 'ws');
+
+                console.debug('connecting to', wsUrl.toString());
+                ws = new WSClient(wsUrl);
                 ws.on('message', () => {
                     console.debug(`received update message from ${system}`);
                     this.updateMaintainerInfo(system);
