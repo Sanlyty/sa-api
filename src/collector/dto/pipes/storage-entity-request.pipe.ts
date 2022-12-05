@@ -36,6 +36,7 @@ export class StorageEntityRequestPipe implements PipeTransform {
                     HttpStatus.BAD_REQUEST
                 );
             }
+            // FIXME: this might actually be a wrong cast! check enum and the 'type' value
             value.type = convertedValue as unknown as number;
         }
         if (value.type !== StorageEntityType.DATACENTER && parentId === null) {

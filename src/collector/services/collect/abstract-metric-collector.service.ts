@@ -1,10 +1,10 @@
+import { Repository } from 'typeorm';
+import { isEmpty } from '@nestjs/common/utils/shared.utils';
 import { MetricRequestDto } from '../../dto/metric-request.dto';
 import { AbstractMetricEntity } from '../../entities/abstract-metric.entity';
 import { StorageEntityRepository } from '../../repositories/storage-entity.repository';
 import { MetricRepositoryFactory } from '../../factory/metric-repository.factory';
 import { StorageEntityEntity } from '../../entities/storage-entity.entity';
-import { Repository } from 'typeorm';
-import { isEmpty } from '@nestjs/common/utils/shared.utils';
 import { LatencyRequestDto } from '../../dto/latency-request.dto';
 import { StorageEntityKey } from '../../utils/storage-entity-key.utils';
 import { ParityGroupMetricRequestDto } from '../../dto/parity-group-metric-request.dto';
@@ -44,25 +44,19 @@ export abstract class AbstractMetricCollectorService {
             metricRequest.metricType
         );
 
-        let data: (
-            | LatencyRequestDto
-            | ParityGroupMetricRequestDto
-            | MetricRequestDto
-        )[];
-        if (isEmpty(metricRequest.data)) {
-            data = [metricRequest];
-        } else {
-            data = metricRequest.data;
-        }
+        const data = isEmpty(metricRequest.data)
+            ? [metricRequest]
+            : metricRequest.data;
+
         const entitiesToSave = await Promise.all(
-            data.map(async (item) => {
+            data.map((item) => {
                 const command: MetricCollectorCommand = {
                     repository,
                     requestDto: metricRequest,
                     storageEntity,
                     dataMetricDto: item as LatencyRequestDto,
                 };
-                return await this.mapData(command);
+                return this.mapData(command);
             })
         );
         return await repository.save(entitiesToSave);
@@ -71,19 +65,16 @@ export abstract class AbstractMetricCollectorService {
     protected async createMetricEntity(
         command: MetricCollectorCommand
     ): Promise<AbstractMetricEntity | ParityGroupMetricEntity> {
-        const criteria = this.getMatchCriteria(
+        const where = this.getMatchCriteria(
             command.requestDto,
             command.storageEntity,
             command.dataMetricDto
         );
 
-        const metricEntity = await command.repository.findOne({
-            where: criteria,
-        });
+        const metricEntity = await command.repository.findOne({ where });
 
-        if (metricEntity === undefined) {
-            return command.repository.create();
-        }
+        if (!metricEntity) return command.repository.create();
+
         return metricEntity;
     }
 }

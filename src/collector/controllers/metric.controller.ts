@@ -75,14 +75,12 @@ export class MetricController {
         const entities = await this.collectMetric(
             this.multiValueCollector,
             systemName,
-            CollectorType.LATENCY,
+            'latency',
             subComponentName,
             undefined,
             dto
         );
-        return LatencyMetricTransformer.transform(
-            entities as unknown as LatencyEntity[]
-        );
+        return LatencyMetricTransformer.transform(entities as LatencyEntity[]);
     }
 
     async collectMetric(

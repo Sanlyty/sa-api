@@ -69,7 +69,7 @@ export class DataCenterService {
         metricGroup: MetricGroup,
         idDataCenter: number,
         period: PeriodType,
-        statisticParams: StatisticParams
+        statisticParams: StatisticParams | null
     ): Promise<StorageEntityEntity[]> {
         const fnMap = {
             [MetricGroup.PERFORMANCE]: this.getPerformanceMetrics,
@@ -89,8 +89,8 @@ export class DataCenterService {
                     : [idDataCenter],
                 metricGroup,
                 period,
-                statisticParams.fromDate,
-                statisticParams.toDate
+                statisticParams?.fromDate,
+                statisticParams?.toDate
             );
         }
 

@@ -1,6 +1,7 @@
+import { NotFoundException } from '@nestjs/common';
+
 import { StorageEntityType } from '../dto/owner.dto';
 import { CollectorType } from '../factory/collector-type.enum';
-import { NotFoundException } from '@nestjs/common';
 
 export interface KeyPart {
     name: string;
@@ -14,105 +15,73 @@ export interface StorageEntityKey {
     child: KeyPart;
 }
 
+const parentMap = {
+    [StorageEntityType.PORT_GROUP]: StorageEntityType.ADAPTER_GROUP,
+    [StorageEntityType.PARITY_GROUP]: StorageEntityType.POOL,
+};
+
 export class StorageEntityKeyUtils {
     public static createComponentKey(
         systemName,
         subComponentName,
         subSubName,
-        paramType: StorageEntityType
+        type: StorageEntityType
     ): StorageEntityKey {
-        let componentKey: StorageEntityKey;
-        if (
-            subSubName !== undefined &&
-            subSubName !== null &&
-            paramType === StorageEntityType.PORT_GROUP
-        ) {
-            componentKey = {
-                datacenter: {
-                    name: 'CZ_Chodov',
-                    type: StorageEntityType.DATACENTER,
-                },
-                grandParent: {
-                    name: systemName,
-                    type: StorageEntityType.SYSTEM,
-                },
+        // Default datacenter
+        const datacenter = {
+            name: 'CZ_Chodov',
+            type: StorageEntityType.DATACENTER,
+        };
+
+        const sysKey = { name: systemName, type: StorageEntityType.SYSTEM };
+
+        if (subSubName && type in parentMap) {
+            return {
+                datacenter,
+                grandParent: sysKey,
                 parent: {
                     name: subComponentName,
-                    type: StorageEntityType.ADAPTER_GROUP,
+                    type: parentMap[type],
                 },
-                child: { name: subSubName, type: paramType },
-            };
-        } else if (
-            subSubName !== undefined &&
-            subSubName !== null &&
-            paramType === StorageEntityType.PARITY_GROUP
-        ) {
-            componentKey = {
-                datacenter: {
-                    name: 'CZ_Chodov',
-                    type: StorageEntityType.DATACENTER,
-                },
-                grandParent: {
-                    name: systemName,
-                    type: StorageEntityType.SYSTEM,
-                },
-                parent: {
-                    name: subComponentName,
-                    type: StorageEntityType.POOL,
-                },
-                child: { name: subSubName, type: paramType },
-            };
-        } else if (subComponentName !== undefined) {
-            componentKey = {
-                datacenter: {
-                    name: 'CZ_Chodov',
-                    type: StorageEntityType.DATACENTER,
-                },
-                grandParent: null,
-                parent: { name: systemName, type: StorageEntityType.SYSTEM },
-                child: { name: subComponentName, type: paramType },
-            };
-        } else {
-            componentKey = {
-                datacenter: {
-                    name: 'CZ_Chodov',
-                    type: StorageEntityType.DATACENTER,
-                },
-                grandParent: null,
-                parent: null,
-                child: { name: systemName, type: paramType },
+                child: { name: subSubName, type },
             };
         }
-        return componentKey;
+
+        if (subComponentName) {
+            return {
+                datacenter,
+                grandParent: null,
+                parent: sysKey,
+                child: { name: subComponentName, type },
+            };
+        }
+
+        return {
+            datacenter,
+            grandParent: null,
+            parent: null,
+            child: { name: systemName, type },
+        };
     }
 
     public static of(type: CollectorType): StorageEntityType {
         switch (type) {
-            case CollectorType.HOST_GROUPS:
+            case 'host-groups':
                 return StorageEntityType.HOST_GROUP;
-            case CollectorType.POOLS:
+            case 'pools':
+            case 'latency':
                 return StorageEntityType.POOL;
-            case CollectorType.CHAS:
+            case 'chas':
                 return StorageEntityType.ADAPTER_GROUP;
-            case CollectorType.SYSTEMS:
+            case 'systems':
                 return StorageEntityType.SYSTEM;
-            case CollectorType.PORTS:
+            case 'ports':
                 return StorageEntityType.PORT_GROUP;
-            case CollectorType.LATENCY:
-                return StorageEntityType.POOL;
-            case CollectorType.PARITY_GROUP:
+            case 'parity-groups':
                 return StorageEntityType.PARITY_GROUP;
-            // case CollectorType.CHANNEL_BOARD:
-            //   return StorageEntityType.PORT;
-            // case CollectorType.DKC:
-            //   return StorageEntityType.DKC;
-            // case CollectorType.CONTROLLER:
-            //   return StorageEntityType.CONTROLLER;
-            // case CollectorType.PORT:
-            //   return StorageEntityType.PORT;
             default:
                 throw new NotFoundException(
-                    `Cannot resolve Storage entity type '${type}'`
+                    `Cannot resolve StorageEntity type '${type}'`
                 );
         }
     }

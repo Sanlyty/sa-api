@@ -251,6 +251,16 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getHgList(systemId: string): Promise<string[]> {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        return (
+            await lastValueFrom(
+                this.httpService.post(maintainerUrl + 'features/hg_list')
+            )
+        ).data;
+    }
+
     public async getPoolInfo(systemId: string): Promise<{
         [poolId: string]: {
             id: number;
