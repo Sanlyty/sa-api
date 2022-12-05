@@ -104,11 +104,11 @@ export class DataCenterService {
     async getPerformanceMetrics(
         metricTypes: MetricType[],
         idDataCenterParam: number[],
-        metricGroup: MetricGroup,
+        _metricGroup: MetricGroup,
         period: PeriodType
     ): Promise<StorageEntityEntity[]> {
         const query = this.querySystems(idDataCenterParam)
-            .innerJoinAndMapMany(
+            .leftJoinAndMapMany(
                 'system.metrics',
                 SystemMetricReadEntity,
                 'metrics',
