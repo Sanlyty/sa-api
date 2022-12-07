@@ -263,26 +263,6 @@ model TimeSeries {
   @@unique([variant, x])
 }
 
-model MaintainerCacheRows {
-  id        Int @id @default(autoincrement())
-  entry     MaintainerCacheEntry @relation(name: "MaintainerCacheEntry", fields: [entryKey], references: [key], onDelete: Cascade)
-  entryKey  String
-
-  timestamp DateTime  @db.Timestamptz()
-  values    Float[]
-
-  @@unique([entryKey, timestamp])
-}
-
-model MaintainerCacheEntry {
-  key       String @id
-  variants  String[]
-  units     String
-  from      DateTime  @db.Timestamptz()
-  to        DateTime  @db.Timestamptz()
-  data      MaintainerCacheRows[] @relation("MaintainerCacheEntry")
-}
-
 model migration_schema {
   id        Int    @id(map: "PK_bb30f6fc0e64e58714313844dc3") @default(autoincrement())
   timestamp BigInt
