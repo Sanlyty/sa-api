@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ScheduleModule } from '@nestjs/schedule';
+
 import { CollectorModule } from './collector/collector.module';
 import { ConfigService } from './config/config.service';
 import { ConfigModule } from './config/config.module';

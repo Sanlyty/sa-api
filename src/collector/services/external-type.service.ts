@@ -1,6 +1,7 @@
 import { Repository } from 'typeorm';
-import { CatExternalTypeEntity } from '../entities/cat-external-type.entity';
 import { InjectRepository } from '@nestjs/typeorm';
+
+import { CatExternalTypeEntity } from '../entities/cat-external-type.entity';
 
 export class ExternalTypeService {
 

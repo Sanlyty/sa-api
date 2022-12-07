@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { getTreeRepository, MoreThan, Repository } from 'typeorm';
-import { MetricTypeService } from './metric-type.service';
+
 import { PortMetricReadEntity } from '../entities/port-metric-read.entity';
 import { MetricType } from '../enums/metric-type.enum';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
+
+import { MetricTypeService } from './metric-type.service';
 
 @Injectable()
 export class PortMetricService {

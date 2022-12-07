@@ -1,13 +1,15 @@
 import { Injectable } from '@nestjs/common';
+
 import { MetricRequestDto } from '../../dto/metric-request.dto';
 import { StorageEntityRepository } from '../../repositories/storage-entity.repository';
 import { MetricRepositoryFactory } from '../../factory/metric-repository.factory';
 import { AbstractMetricEntity } from '../../entities/abstract-metric.entity';
 import { StorageEntityEntity } from '../../entities/storage-entity.entity';
-import { AbstractMetricCollectorService, MetricCollectorCommand } from './abstract-metric-collector.service';
 import { SystemMetricEntity } from '../../entities/system-metric.entity';
 import { ParityGroupMetricRequestDto } from '../../dto/parity-group-metric-request.dto';
 import { ParityGroupMetricEntity } from '../../entities/parity-group-metric.entity';
+
+import { AbstractMetricCollectorService, MetricCollectorCommand } from './abstract-metric-collector.service';
 
 @Injectable()
 export class MetricCollectorService extends AbstractMetricCollectorService {

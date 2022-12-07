@@ -5,6 +5,7 @@ import {
     Injectable,
     PipeTransform,
 } from '@nestjs/common';
+
 import { ExternalType } from '../../enums/external-type.enum';
 
 type Query = { data: { type: number; value: unknown }[] };

@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
 import { readFileSync, writeFile, existsSync } from 'fs';
+
+import { Injectable } from '@nestjs/common';
 import { createTransport, Transporter } from 'nodemailer';
+
 import { ConfigService } from '../../config/config.service';
 import {
     MaintainerService,

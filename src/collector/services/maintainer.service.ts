@@ -1,9 +1,11 @@
+import { readFileSync } from 'fs';
+import { EventEmitter } from 'events';
+
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
-import { readFileSync } from 'fs';
 import { lastValueFrom } from 'rxjs';
 import { WebSocket as WSClient } from 'ws';
-import { EventEmitter } from 'events';
+
 
 import { MetricType } from '../enums/metric-type.enum';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';

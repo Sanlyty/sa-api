@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
-import { AbstractMetricCollectorService, MetricCollectorCommand } from './abstract-metric-collector.service';
+
 import { StorageEntityEntity } from '../../entities/storage-entity.entity';
 import { MetricRequestDto } from '../../dto/metric-request.dto';
 import { LatencyEntity } from '../../entities/latency.entity';
 import { StorageEntityRepository } from '../../repositories/storage-entity.repository';
 import { MetricRepositoryFactory } from '../../factory/metric-repository.factory';
 import { LatencyRequestDto } from '../../dto/latency-request.dto';
+
+import { AbstractMetricCollectorService, MetricCollectorCommand } from './abstract-metric-collector.service';
 
 @Injectable()
 export class MultiValueMetricCollectorService extends AbstractMetricCollectorService {

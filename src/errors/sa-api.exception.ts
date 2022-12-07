@@ -1,4 +1,5 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
+
 import { ErrorCode } from './error-code.enum';
 
 export class SaApiException extends HttpException {

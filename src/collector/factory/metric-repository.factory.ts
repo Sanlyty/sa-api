@@ -1,5 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+
 import { SystemMetricEntity } from '../entities/system-metric.entity';
 import { PoolMetricEntity } from '../entities/pool-metric.entity';
 import { ChaMetricEntity } from '../entities/cha-metric.entity';
@@ -7,7 +9,6 @@ import { HostGroupMetricEntity } from '../entities/host-group-metric.entity';
 import { PortMetricEntity } from '../entities/port-metric.entity';
 import { StorageEntityType } from '../dto/owner.dto';
 import { AbstractMetricEntity } from '../entities/abstract-metric.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { MetricType } from '../enums/metric-type.enum';
 import { LatencyEntity } from '../entities/latency.entity';
 import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity';

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+
 import { SystemMetricService } from '../../collector/services/system-metric.service';
 import { GraphDataParams } from '../controllers/params/graph-data.params';
 import { PoolMetricService } from '../../collector/services/pool-metric.service';

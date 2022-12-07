@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+
 import { StorageEntityDetailResponseDto } from './storage-entity-detail-response.dto';
 
 export enum StorageEntityType {

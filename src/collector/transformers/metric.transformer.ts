@@ -1,4 +1,3 @@
-import { TransformationError } from './transformation.error';
 import { MetricResponseDto } from '../dto/metric-response.dto';
 import { MetricType } from '../enums/metric-type.enum';
 import { SystemMetricEntity } from '../entities/system-metric.entity';
@@ -7,8 +6,10 @@ import { ChaMetricEntity } from '../entities/cha-metric.entity';
 import { PortMetricEntity } from '../entities/port-metric.entity';
 import { HostGroupMetricEntity } from '../entities/host-group-metric.entity';
 import { LatencyEntity } from '../entities/latency.entity';
-import { StorageEntityTransformer } from './storage-entity.transformer';
 import { ParityGroupMetricEntity } from '../entities/parity-group-metric.entity';
+
+import { StorageEntityTransformer } from './storage-entity.transformer';
+import { TransformationError } from './transformation.error';
 
 export class MetricTransformer {
     public static transform(

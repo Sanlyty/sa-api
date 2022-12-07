@@ -1,7 +1,9 @@
 import { Test } from '@nestjs/testing';
-import { LatencyBlockSizeService, LatencyMetadata, OperationData } from './latency-block-size.service';
+
 import { OperationType } from '../../collector/enums/operation-type.enum';
 import { LatencyData, LatencyMetricService } from '../../collector/services/latency-metric.service';
+
+import { LatencyBlockSizeService, LatencyMetadata, OperationData } from './latency-block-size.service';
 
 describe('LatencyByBlockSizeService', () => {
   let service: LatencyBlockSizeService;

@@ -1,6 +1,7 @@
 import { MetricType } from '../enums/metric-type.enum';
-import { MetricGroup } from './data-center.service';
 import { PeriodType } from '../enums/period-type.enum';
+
+import { MetricGroup } from './data-center.service';
 
 type MetricTypeMap = Record<MetricGroup, Record<PeriodType, MetricType[]>>;
 

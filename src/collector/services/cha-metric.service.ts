@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { getTreeRepository, MoreThan, Repository } from 'typeorm';
+import { InjectRepository } from '@nestjs/typeorm';
+
 import { ChaMetricEntity } from '../entities/cha-metric.entity';
-import { MetricTypeService } from './metric-type.service';
 import { MetricType } from '../enums/metric-type.enum';
 import { ChaMetricReadEntity } from '../entities/cha-metric-read.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
+
+import { MetricTypeService } from './metric-type.service';
 
 @Injectable()
 export class ChaMetricService {

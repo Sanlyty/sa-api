@@ -1,5 +1,6 @@
 import { MetricType } from '../../collector/enums/metric-type.enum';
 import { MetricEntityInterface } from '../../collector/entities/metric-entity.interface';
+
 import { AggregationAlgorithmAbstract } from './aggregation-algorithm.abstract';
 
 export class WeightedAverageImpl extends AggregationAlgorithmAbstract {

@@ -1,4 +1,5 @@
 import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
+
 import { ErrorDto } from '../error.dto';
 import { SaApiException } from '../sa-api.exception';
 import { EntityServiceError } from '../../collector/services/errors/entity-service.error';

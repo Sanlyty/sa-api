@@ -8,6 +8,7 @@ import {
     UsePipes,
     ValidationPipe,
 } from '@nestjs/common';
+
 import { MetricRequestDto } from '../dto/metric-request.dto';
 import { CollectorType } from '../factory/collector-type.enum';
 import { LoggingInterceptor } from '../../logging.interceptor';

@@ -1,12 +1,14 @@
-import { AggregatedMetricService } from './aggregated-metric.service';
+import { Injectable } from '@nestjs/common';
+
 import {
     DataCenterService,
     MetricGroup,
 } from '../../collector/services/data-center.service';
 import { MetricTypeService } from '../../collector/services/metric-type.service';
 import { MetricType } from '../../collector/enums/metric-type.enum';
-import { Injectable } from '@nestjs/common';
 import { StorageEntityEntity } from '../../collector/entities/storage-entity.entity';
+
+import { AggregatedMetricService } from './aggregated-metric.service';
 
 @Injectable()
 export class SystemAggregatedMetricService extends AggregatedMetricService {

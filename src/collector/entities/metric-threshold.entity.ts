@@ -1,4 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+
 import { CatMetricTypeEntity } from './cat-metric-type.entity';
 
 @Entity('metric_thresholds')

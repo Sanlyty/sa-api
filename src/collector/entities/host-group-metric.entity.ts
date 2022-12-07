@@ -1,4 +1,5 @@
 import { Entity } from 'typeorm';
+
 import { AbstractMetricEntity } from './abstract-metric.entity';
 
 @Entity('host_group_metrics')

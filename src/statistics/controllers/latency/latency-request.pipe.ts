@@ -1,4 +1,5 @@
 import { ArgumentMetadata, Injectable, PipeTransform } from '@nestjs/common';
+
 import { OperationType } from '../../../collector/enums/operation-type.enum';
 
 type Query = { operations?: unknown[] };

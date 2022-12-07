@@ -1,6 +1,7 @@
-import { StorageEntityType } from './owner.dto';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty } from 'class-validator';
+
+import { StorageEntityType } from './owner.dto';
 
 export class StorageEntityRequestDto {
   @ApiProperty()

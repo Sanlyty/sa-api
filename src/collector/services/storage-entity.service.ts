@@ -1,20 +1,22 @@
 import { Injectable } from '@nestjs/common';
+import { isNotEmpty } from 'class-validator';
+
 import { StorageEntityRequestDto } from '../dto/storage-entity-request.dto';
 import { StorageEntityType } from '../dto/owner.dto';
-import { ArgumentError } from './errors/argument.error';
 import { ErrorCodeConst } from '../../errors/error-code.enum';
-import { StorageEntityAlreadyExistsError } from './errors/storage-entity-already-exists.error';
 import { StorageEntityRepository } from '../repositories/storage-entity.repository';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { StorageEntityStatus } from '../enums/storage-entity-status.enum';
 import { ChangeStatusRequestDto } from '../dto/change-status-request.dto';
 import { StorageEntityKey } from '../utils/storage-entity-key.utils';
-import { SystemDetailsService } from './system-details.service';
 import { StorageEntityDetailRequestDto } from '../dto/storage-entity-detail-request.dto';
-import { StorageEntityNotFoundError } from './errors/storage-entity-not-found.error';
 import { DbEvalUtils } from '../utils/db-eval.utils';
-import { isNotEmpty } from 'class-validator';
 import { DuplicateStorageEntityDto } from '../dto/duplicate-storage-entity.dto';
+
+import { StorageEntityNotFoundError } from './errors/storage-entity-not-found.error';
+import { SystemDetailsService } from './system-details.service';
+import { StorageEntityAlreadyExistsError } from './errors/storage-entity-already-exists.error';
+import { ArgumentError } from './errors/argument.error';
 
 @Injectable()
 export class StorageEntityService {

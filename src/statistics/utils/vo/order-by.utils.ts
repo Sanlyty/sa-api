@@ -1,7 +1,8 @@
-import { OrderByVo } from './order-by.vo';
 import { MetricFilterError } from '../../services/metric-filter.error';
 import { MetricType } from '../../../collector/enums/metric-type.enum';
 import { OrderByDirection } from '../sort-storage-entity-by-metric.utils';
+
+import { OrderByVo } from './order-by.vo';
 
 export class OrderByUtils {
     private static specialOrderBy = ['TIER', 'NAME', 'REFERENCE_ID'];

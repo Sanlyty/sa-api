@@ -5,18 +5,20 @@ import {
     Query,
     NotFoundException,
 } from '@nestjs/common';
+
 import { DataCenterStatisticsService } from '../services/data-center-statistics.service';
 import {
     DataCenterService,
     MetricGroup,
 } from '../../collector/services/data-center.service';
-import { StatisticQueryParams } from './params/statistics.query-params';
 import { StorageEntityTransformer } from '../../collector/transformers/storage-entity.transformer';
 import { StorageEntityResponseDto } from '../../collector/dto/storage-entity-response.dto';
 import { StorageEntityMetricTransformer } from '../transformers/storage-entity-metric.transformer';
 import { StorageEntityFilterVo } from '../services/vos/storage-entity-filter.vo';
 import { MetricFilterUtils } from '../utils/metric-filter.utils';
 import { OrderByUtils } from '../utils/vo/order-by.utils';
+
+import type { StatisticQueryParams } from './params/statistics.query-params';
 
 const metricGroups = {
     performance: MetricGroup.PERFORMANCE,

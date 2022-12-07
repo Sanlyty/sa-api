@@ -1,4 +1,5 @@
 import { ArgumentMetadata, Injectable, PipeTransform } from '@nestjs/common';
+
 import { MetricType } from '../../../collector/enums/metric-type.enum';
 
 type Query = { types?: unknown[] };

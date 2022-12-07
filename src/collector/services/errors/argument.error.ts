@@ -1,6 +1,7 @@
+import { HttpStatus } from '@nestjs/common';
+
 import { SaApiException } from '../../../errors/sa-api.exception';
 import { ErrorCode } from '../../../errors/error-code.enum';
-import { HttpStatus } from '@nestjs/common';
 
 export class ArgumentError extends SaApiException {
   constructor(code: ErrorCode, msg: string) {

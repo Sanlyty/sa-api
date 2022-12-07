@@ -1,4 +1,5 @@
 import { Column, Entity } from 'typeorm';
+
 import { AbstractMetricEntity } from './abstract-metric.entity';
 
 @Entity('block_size_latency')

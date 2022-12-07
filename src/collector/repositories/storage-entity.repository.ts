@@ -1,8 +1,9 @@
 import { EntityRepository, SelectQueryBuilder, TreeRepository } from 'typeorm';
+import { isEmpty } from '@nestjs/common/utils/shared.utils';
+
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { StorageEntityStatus } from '../enums/storage-entity-status.enum';
 import { StorageEntityType } from '../dto/owner.dto';
-import { isEmpty } from '@nestjs/common/utils/shared.utils';
 import { StorageEntityNotFoundError } from '../services/errors/storage-entity-not-found.error';
 import { KeyPart, StorageEntityKey } from '../utils/storage-entity-key.utils';
 import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.entity';

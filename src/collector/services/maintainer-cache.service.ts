@@ -1,22 +1,23 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import dayjs from 'dayjs';
-import dayjsIsoWeek from 'dayjs/plugin/isoWeek';
-import dayjsMinMax from 'dayjs/plugin/minMax';
-
-import PromisePool from '@supercharge/promise-pool';
-import { pool } from 'workerpool';
-import { encode } from 'lz4';
-
-import { MaintainerService, type UpdatedInfo } from './maintainer.service';
-import type { MaintainerDataResponse } from '../controllers/compat.controller';
-import { ConfigService } from '../../config/config.service';
-import { fromMins, toMins } from '../../utils/date';
-
-// Node
 import { cpus } from 'os';
 import * as fs from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
+
+import { BadRequestException, Injectable } from '@nestjs/common';
+import dayjs from 'dayjs';
+import dayjsIsoWeek from 'dayjs/plugin/isoWeek';
+import dayjsMinMax from 'dayjs/plugin/minMax';
+import PromisePool from '@supercharge/promise-pool';
+import { pool } from 'workerpool';
+import { encode } from 'lz4';
+
+import type { MaintainerDataResponse } from '../controllers/compat.controller';
+import { ConfigService } from '../../config/config.service';
+import { fromMins, toMins } from '../../utils/date';
+
+import { MaintainerService, type UpdatedInfo } from './maintainer.service';
+
+// Node
 
 dayjs.extend(dayjsIsoWeek);
 dayjs.extend(dayjsMinMax);

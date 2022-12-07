@@ -1,10 +1,11 @@
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
 import { AppModule } from './app.module';
 import { WinstonLoggerService } from './winston-logger.service';
 import { SaApiExceptionFilter } from './errors/filters/sa-api-exception.filter';
 import { FallbackErrorFilter } from './errors/filters/fallback-exception.filter';
 import { HttpExceptionFilter } from './errors/filters/http-exception.filter';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {

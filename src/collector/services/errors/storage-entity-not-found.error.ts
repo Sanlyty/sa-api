@@ -1,6 +1,7 @@
+import { HttpStatus } from '@nestjs/common';
+
 import { SaApiException } from '../../../errors/sa-api.exception';
 import { ErrorCodeConst } from '../../../errors/error-code.enum';
-import { HttpStatus } from '@nestjs/common';
 
 export class StorageEntityNotFoundError extends SaApiException {
   constructor(msg: string) {

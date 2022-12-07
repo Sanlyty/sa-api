@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+
 import { DatabaseAdminitrationService } from '../services/database-adminitration.service';
 
 @Controller('/api/v1/admin')

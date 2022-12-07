@@ -1,5 +1,5 @@
-import { AggregatedMetricService } from './aggregated-metric.service';
 import { Injectable } from '@nestjs/common';
+
 import {
     DataCenterService,
     MetricGroup,
@@ -8,6 +8,8 @@ import { MetricTypeService } from '../../collector/services/metric-type.service'
 import { MetricType } from '../../collector/enums/metric-type.enum';
 import { StorageEntityEntity } from '../../collector/entities/storage-entity.entity';
 import { MetricEntityInterface } from '../../collector/entities/metric-entity.interface';
+
+import { AggregatedMetricService } from './aggregated-metric.service';
 
 @Injectable()
 export class PoolAggregatedMetricService extends AggregatedMetricService {

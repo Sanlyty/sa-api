@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { ConfigModule } from '../config/config.module';
+
 import { SystemMetricEntity } from './entities/system-metric.entity';
 import { SystemMetricService } from './services/system-metric.service';
 import { CatMetricTypeEntity } from './entities/cat-metric-type.entity';
@@ -43,7 +46,6 @@ import { PgMultiValueMetricCollectorService } from './services/collect/pg-multi-
 import { MaintainerService } from './services/maintainer.service';
 import { CompatibilityController } from './controllers/compat.controller';
 import { MaintainerCacheService } from './services/maintainer-cache.service';
-import { ConfigModule } from '../config/config.module';
 
 @Module({
     imports: [

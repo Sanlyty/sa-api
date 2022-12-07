@@ -1,11 +1,12 @@
 module.exports = {
     "env": {
-        "browser": true,
+        "node": true,
         "es2021": true
     },
     "extends": [
         "eslint:recommended",
-        "plugin:@typescript-eslint/recommended"
+        "plugin:@typescript-eslint/recommended",
+        "plugin:import/recommended"
     ],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
@@ -16,5 +17,12 @@ module.exports = {
         "@typescript-eslint"
     ],
     "rules": {
+        "import/order": [
+            "error",
+            {
+                "newlines-between": "always",
+            }
+        ],
+        "import/no-unresolved": "off"
     }
 }

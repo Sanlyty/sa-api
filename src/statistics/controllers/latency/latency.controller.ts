@@ -6,11 +6,13 @@ import {
     HttpStatus,
     Post,
 } from '@nestjs/common';
+
 import { OperationType } from '../../../collector/enums/operation-type.enum';
 import {
     LatencyBlockSizeService,
     LatencyMetadata,
 } from '../../services/latency-block-size.service';
+
 import { LatencyRequestPipe } from './latency-request.pipe';
 
 export interface LatencyFilter {

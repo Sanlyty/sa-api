@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { LatencyEntity } from '../entities/latency.entity';
 import { isEmpty } from '@nestjs/common/utils/shared.utils';
+
+import { LatencyEntity } from '../entities/latency.entity';
 import { LatencyFilter } from '../../statistics/controllers/latency/latency.controller';
 import { StorageEntityRepository } from '../repositories/storage-entity.repository';
+
 import { MaintainerService } from './maintainer.service';
 
 export interface LatencyData {

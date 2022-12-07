@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { PoolMetricEntity } from '../entities/pool-metric.entity';
-import { MetricTypeService } from './metric-type.service';
 import { MetricType } from '../enums/metric-type.enum';
 import { PoolMetricReadEntity } from '../entities/pool-metric-read.entity';
 import { StorageEntityStatus } from '../enums/storage-entity-status.enum';
+
+import { MetricTypeService } from './metric-type.service';
 
 @Injectable()
 export class PoolMetricService {

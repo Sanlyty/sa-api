@@ -1,6 +1,7 @@
-import { MetricAggregationInterface } from './metric-aggregation.interface';
 import { MetricType } from '../../collector/enums/metric-type.enum';
 import { MetricEntityInterface } from '../../collector/entities/metric-entity.interface';
+
+import { MetricAggregationInterface } from './metric-aggregation.interface';
 
 export abstract class AggregationAlgorithmAbstract
     implements MetricAggregationInterface

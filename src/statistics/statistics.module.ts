@@ -1,7 +1,12 @@
 import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+import { CollectorModule } from '../collector/collector.module';
+import { ConfigModule } from '../config/config.module';
+import { StorageEntityRepository } from '../collector/repositories/storage-entity.repository';
+
 import { DataCenterStatisticsController } from './controllers/data-center-statistics.controller';
 import { DataCenterStatisticsService } from './services/data-center-statistics.service';
-import { CollectorModule } from '../collector/collector.module';
 import { InfrastructureStatisticsController } from './controllers/infrastructure-statistics.controller';
 import { GraphDataService } from './services/graph-data.service';
 import { PoolAggregatedMetricService } from './services/pool-aggregated-metric.service';
@@ -12,9 +17,6 @@ import { MaterializedViewRefresher } from './workers/materialized-view-refresher
 import { DatabaseAdminitrationService } from './services/database-adminitration.service';
 import { AdminController } from './controllers/admin.controller';
 import { NotificationService } from './workers/notification-service';
-import { ConfigModule } from '../config/config.module';
-import { StorageEntityRepository } from '../collector/repositories/storage-entity.repository';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { TimeSeriesService } from './workers/time-series-service';
 import { DeviceMapService } from './workers/device-map.service';
 

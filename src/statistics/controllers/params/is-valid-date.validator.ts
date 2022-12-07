@@ -1,4 +1,4 @@
-import { registerDecorator, ValidationOptions } from 'class-validator';
+import { registerDecorator, type ValidationOptions } from 'class-validator';
 
 // Todo customized validation messages
 export function IsValidDate(validationOptions?: ValidationOptions) {

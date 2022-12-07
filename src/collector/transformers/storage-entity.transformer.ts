@@ -1,7 +1,7 @@
-import { StorageEntityResponseDto } from '../dto/storage-entity-response.dto';
-import { ExternalEntity } from '../entities/external.entity';
-import { TransformationError } from './transformation.error';
 import { isEmpty } from '@nestjs/common/utils/shared.utils';
+
+import { ExternalEntity } from '../entities/external.entity';
+import { StorageEntityResponseDto } from '../dto/storage-entity-response.dto';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { ExternalResponseDto } from '../dto/external-response.dto';
 import { ExternalType } from '../enums/external-type.enum';
@@ -9,6 +9,8 @@ import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.e
 import { StorageEntityDetailResponseDto } from '../dto/storage-entity-detail-response.dto';
 import { Owner, StorageEntityType } from '../dto/owner.dto';
 import { StorageEntityStatus } from '../enums/storage-entity-status.enum';
+
+import { TransformationError } from './transformation.error';
 
 export class StorageEntityTransformer {
     public static async transformAll(
