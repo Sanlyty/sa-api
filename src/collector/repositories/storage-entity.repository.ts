@@ -90,7 +90,7 @@ export class StorageEntityRepository extends TreeRepository<StorageEntityEntity>
             searchKey.type,
             parentToSearch
         );
-        if (storageEntity === undefined && createIfNotExists === true) {
+        if (!storageEntity && createIfNotExists === true) {
             storageEntity = this.create({
                 name: searchKey.name,
                 idType: searchKey.type,
@@ -98,7 +98,7 @@ export class StorageEntityRepository extends TreeRepository<StorageEntityEntity>
                 parent: parentEntity,
             });
             await this.save(storageEntity);
-        } else if (storageEntity === undefined && createIfNotExists === false) {
+        } else if (!storageEntity && createIfNotExists === false) {
             throw new StorageEntityNotFoundError(
                 `Cannot find storage entity ${
                     StorageEntityType[searchKey.type]
