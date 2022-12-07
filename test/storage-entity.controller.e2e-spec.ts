@@ -1,8 +1,9 @@
 import * as request from 'supertest';
 import { HttpStatus } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { StorageEntityType } from '../src/collector/dto/owner.dto';
 import { ErrorCodeConst } from '../src/errors/error-code.enum';
-import { Test, TestingModule } from '@nestjs/testing';
 import { FallbackErrorFilter } from '../src/errors/filters/fallback-exception.filter';
 import { AppModule } from '../src/app.module';
 import { SaApiExceptionFilter } from '../src/errors/filters/sa-api-exception.filter';

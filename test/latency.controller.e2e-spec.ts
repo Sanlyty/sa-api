@@ -1,11 +1,12 @@
 import * as request from 'supertest';
+import { HttpStatus } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { OperationType } from '../src/collector/enums/operation-type.enum';
 import { MetricType } from '../src/collector/enums/metric-type.enum';
-import { HttpStatus } from '@nestjs/common';
 import { OperationData } from '../src/statistics/services/latency-block-size.service';
 import { LatencyResponseDto } from '../src/collector/dto/latency-response.dto';
 import { StorageEntityType } from '../src/collector/dto/owner.dto';
-import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../src/app.module';
 
 describe('Latency Controller', () => {

@@ -1,9 +1,10 @@
 import * as request from 'supertest';
+import { HttpStatus } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+
 import { MetricType } from '../src/collector/enums/metric-type.enum';
 import { StorageEntityType } from '../src/collector/dto/owner.dto';
 import { StorageEntityStatus } from '../src/collector/enums/storage-entity-status.enum';
-import { HttpStatus } from '@nestjs/common';
-import { Test, TestingModule } from '@nestjs/testing';
 import { AppModule } from '../src/app.module';
 import { ValidateResponseUtils } from '../src/tests/validate-response.utils';
 import { FallbackErrorFilter } from '../src/errors/filters/fallback-exception.filter';
