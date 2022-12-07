@@ -6,21 +6,18 @@ import { CatOperationEntity } from '../entities/cat-operation.entity';
 
 @Injectable()
 export class OperationService {
+    constructor(
+        @InjectRepository(CatOperationEntity)
+        private readonly repository: Repository<CatOperationEntity>
+    ) {}
 
-  constructor(
-    @InjectRepository(CatOperationEntity)
-    private readonly repository: Repository<CatOperationEntity>,
-  ) {
-  }
+    async findById(idParam: number): Promise<CatOperationEntity> {
+        return await this.repository
+            .findOne({ where: { id: idParam } })
+            .then((metricType) => metricType);
+    }
 
-  async findById(idParam: number): Promise<CatOperationEntity> {
-    return await this.repository
-      .findOne({ id: idParam })
-      .then(metricType => metricType);
-  }
-
-  async findByMetricTypes(types: number[]) {
-    return await this.repository
-      .find({ id: In(types) });
-  }
+    async findByMetricTypes(types: number[]) {
+        return await this.repository.find({ where: { id: In(types) } });
+    }
 }

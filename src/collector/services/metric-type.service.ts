@@ -6,21 +6,18 @@ import { CatMetricTypeEntity } from '../entities/cat-metric-type.entity';
 
 @Injectable()
 export class MetricTypeService {
+    constructor(
+        @InjectRepository(CatMetricTypeEntity)
+        private readonly repository: Repository<CatMetricTypeEntity>
+    ) {}
 
-  constructor(
-    @InjectRepository(CatMetricTypeEntity)
-    private readonly repository: Repository<CatMetricTypeEntity>,
-  ) {
-  }
+    async findById(idParam: number): Promise<CatMetricTypeEntity> {
+        return await this.repository
+            .findOne({ where: { id: idParam } })
+            .then((metricType) => metricType);
+    }
 
-  async findById(idParam: number): Promise<CatMetricTypeEntity> {
-    return await this.repository
-      .findOne({ id: idParam })
-      .then(metricType => metricType);
-  }
-
-  async findByMetricTypes(types: number[]) {
-    return await this.repository
-      .find({ id: In(types) });
-  }
+    async findByMetricTypes(types: number[]) {
+        return await this.repository.find({ where: { id: In(types) } });
+    }
 }

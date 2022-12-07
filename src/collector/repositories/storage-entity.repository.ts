@@ -1,5 +1,7 @@
-import { EntityRepository, SelectQueryBuilder, TreeRepository } from 'typeorm';
+import { Repository, SelectQueryBuilder, TreeRepository } from 'typeorm';
 import { isEmpty } from '@nestjs/common/utils/shared.utils';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { StorageEntityStatus } from '../enums/storage-entity-status.enum';
@@ -8,42 +10,44 @@ import { StorageEntityNotFoundError } from '../services/errors/storage-entity-no
 import { KeyPart, StorageEntityKey } from '../utils/storage-entity-key.utils';
 import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.entity';
 
-@EntityRepository(StorageEntityEntity)
+@Injectable()
 export class StorageEntityRepository extends TreeRepository<StorageEntityEntity> {
-    private hierachyType: ((
-        query: SelectQueryBuilder<StorageEntityEntity>,
-        type: StorageEntityType,
-        systemId: number,
-        status: StorageEntityStatus[]
-    ) => void)[][] = [];
-
-    constructor() {
-        super();
-        this.hierachyType[StorageEntityType.DATACENTER] = [(query) => query];
-        this.hierachyType[StorageEntityType.SYSTEM] = [this.getAllSystems];
-
-        this.hierachyType[StorageEntityType.DKC] = [
-            this.getAllSystems,
-            this.getAllDkcs,
-        ];
-        this.hierachyType[StorageEntityType.CONTROLLER] = [
+    private hierachyType: {
+        [key: number]: ((
+            query: SelectQueryBuilder<StorageEntityEntity>,
+            type: StorageEntityType,
+            systemId: number,
+            status: StorageEntityStatus[]
+        ) => void)[];
+    } = {
+        [StorageEntityType.DATACENTER]: [(query) => query],
+        [StorageEntityType.SYSTEM]: [this.getAllSystems],
+        [StorageEntityType.DKC]: [this.getAllSystems, this.getAllDkcs],
+        [StorageEntityType.CONTROLLER]: [
             this.getAllSystems,
             this.getAllDkcs,
             this.getAllControllers,
-        ];
-        this.hierachyType[StorageEntityType.CHANNEL_BOARD] = [
+        ],
+        [StorageEntityType.CHANNEL_BOARD]: [
             this.getAllSystems,
             this.getAllDkcs,
             this.getAllControllers,
             this.getAllChannelBoards,
-        ];
-        this.hierachyType[StorageEntityType.PORT] = [
+        ],
+        [StorageEntityType.PORT]: [
             this.getAllSystems,
             this.getAllDkcs,
             this.getAllControllers,
             this.getAllChannelBoards,
             this.getAllPorts,
-        ];
+        ],
+    };
+
+    constructor(
+        @InjectRepository(StorageEntityEntity)
+        repository: Repository<StorageEntityEntity>
+    ) {
+        super(repository.target, repository.manager, repository.queryRunner);
     }
 
     public async fetchByStorageEntityKey(

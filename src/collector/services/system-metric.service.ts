@@ -70,7 +70,7 @@ export class SystemMetricService {
         const result = [];
         for (const type of types) {
             const entities = await this.metricReadRepository.find({
-                metricTypeEntity: type,
+                where: { metricTypeEntity: type },
             });
             result.push(SystemMetricService.aggregateMetric(entities));
         }

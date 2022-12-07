@@ -6,7 +6,6 @@ import { isEmpty } from '@nestjs/common/utils/shared.utils';
 import { StorageEntityDetailsEntity } from '../entities/storage-entity-details.entity';
 import { StorageEntityDetailRequestDto } from '../dto/storage-entity-detail-request.dto';
 
-
 @Injectable()
 export class SystemDetailsService {
     constructor(
@@ -15,7 +14,9 @@ export class SystemDetailsService {
     ) {}
 
     public async upsert(id: number, request: StorageEntityDetailRequestDto) {
-        let entity = await this.systemDetailsRepository.findOne(id);
+        let entity = await this.systemDetailsRepository.findOne({
+            where: { id },
+        });
         if (entity === undefined) {
             entity = new StorageEntityDetailsEntity();
             entity.id = id;

@@ -70,12 +70,12 @@ import { MaintainerCacheService } from './services/maintainer-cache.service';
             /**
              * Custom repositories
              */
-            StorageEntityRepository,
         ]),
         HttpModule,
         ConfigModule,
     ],
     providers: [
+        StorageEntityRepository,
         PoolMetricService,
         SystemMetricService,
         ChaMetricService,
@@ -105,6 +105,7 @@ import { MaintainerCacheService } from './services/maintainer-cache.service';
         CompatibilityController,
     ],
     exports: [
+        StorageEntityRepository,
         DataCenterService,
         CapacityStatisticsService,
         ChaMetricService,

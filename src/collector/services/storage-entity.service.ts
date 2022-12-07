@@ -40,9 +40,9 @@ export class StorageEntityService {
     ): Promise<StorageEntityEntity> {
         let parent;
         if (requestEntity.type !== StorageEntityType.DATACENTER) {
-            parent = await this.storageEntityRepository.findOne(
-                requestEntity.parentId
-            );
+            parent = await this.storageEntityRepository.findOne({
+                where: { id: requestEntity.parentId },
+            });
             if (parent === undefined) {
                 throw new ArgumentError(
                     ErrorCodeConst.ENTITY_NOT_FOUND,
@@ -142,7 +142,9 @@ export class StorageEntityService {
         id: number,
         requestDto: ChangeStatusRequestDto
     ): Promise<StorageEntityEntity> {
-        const storageEntity = await this.storageEntityRepository.findOne(id);
+        const storageEntity = await this.storageEntityRepository.findOne({
+            where: { id },
+        });
         const storageEntityTree =
             await this.storageEntityRepository.findDescendantsTree(
                 storageEntity
@@ -170,7 +172,9 @@ export class StorageEntityService {
     }
 
     async update(id: number, request: StorageEntityDetailRequestDto) {
-        const entity = await this.storageEntityRepository.findOne(id);
+        const entity = await this.storageEntityRepository.findOne({
+            where: { id },
+        });
 
         if (entity === undefined) {
             throw new ArgumentError(
@@ -189,7 +193,8 @@ export class StorageEntityService {
     }
 
     async delete(id: number) {
-        const entity = await this.storageEntityRepository.findOne(id, {
+        const entity = await this.storageEntityRepository.findOne({
+            where: { id },
             relations: ['children'],
         });
         if (entity === undefined) {
@@ -218,7 +223,9 @@ export class StorageEntityService {
     }
 
     async move(id: number, parentId: number) {
-        const entity = await this.storageEntityRepository.findOne(id);
+        const entity = await this.storageEntityRepository.findOne({
+            where: { id },
+        });
         if (
             entity === undefined ||
             entity.idCatComponentStatus === StorageEntityStatus.INACTIVE
@@ -227,9 +234,9 @@ export class StorageEntityService {
                 `Entity(id: ${id}) not found or is INACTIVE.`
             );
         }
-        const parentEntity = await this.storageEntityRepository.findOne(
-            parentId
-        );
+        const parentEntity = await this.storageEntityRepository.findOne({
+            where: { id: parentId },
+        });
         if (
             parentEntity === undefined ||
             parentEntity.idCatComponentStatus === StorageEntityStatus.INACTIVE
@@ -265,10 +272,12 @@ AND subtree.id_ancestor = ${id};
         requestDto: DuplicateStorageEntityDto,
         sourceStorageEntityId: number
     ) {
-        const system = await this.storageEntityRepository.findOne(
-            sourceStorageEntityId,
-            { relations: ['children'] }
-        );
+        const system = await this.storageEntityRepository.findOne({
+            where: {
+                id: sourceStorageEntityId,
+            },
+            relations: ['children'],
+        });
         if (system === undefined) {
             throw new StorageEntityNotFoundError(
                 `Entity(id: ${sourceStorageEntityId}) not found.`
@@ -311,7 +320,10 @@ AND subtree.id_ancestor = ${id};
             childRequest.parentId = parent.id;
             const duplicatedChild = await this.create(childRequest);
             const childrenLoaded = (
-                await this.storageEntityRepository.findOne(child.id, {
+                await this.storageEntityRepository.findOne({
+                    where: {
+                        id: child.id,
+                    },
                     relations: ['children'],
                 })
             ).children;
