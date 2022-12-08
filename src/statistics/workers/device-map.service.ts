@@ -192,6 +192,9 @@ export class DeviceMapService {
                 );
 
                 const leftRelatedPorts = chbInfo.chbPorts[pair[0]];
+
+                if (!leftRelatedPorts) continue;
+
                 for (const portPair of chbInfo.portPairs.filter((pair) =>
                     pair.some((port) => leftRelatedPorts.includes(port))
                 )) {
