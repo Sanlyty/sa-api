@@ -173,7 +173,7 @@ export class DeviceMapService {
         }
 
         // Activate CHB and port pairs
-        {
+        try {
             const chbInfo = await this.maintainerService.getChbInfo(system);
 
             // TODO: determine CTL and create a CHB
@@ -205,6 +205,11 @@ export class DeviceMapService {
                     );
                 }
             }
+        } catch (err) {
+            console.error(
+                `Failed to update CHB and FE port pairs for ${system}`,
+                err
+            );
         }
 
         // Find all active VMWare hostgroups from the maintainer
