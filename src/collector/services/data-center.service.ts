@@ -536,6 +536,10 @@ export class DataCenterService {
         fromDate: number,
         toDate: number
     ) {
+        const maintained = await this.maintainerService.getHandledSystems([
+            'hp',
+        ]);
+
         const query = this.querySystems(idDataCenterParam)
             .innerJoinAndSelect(
                 'system.children',
@@ -561,13 +565,15 @@ export class DataCenterService {
                 idStatus: StorageEntityStatus.ACTIVE,
             })
             .andWhere(
-                '((metrics.startTime >= :fromTime AND metrics.endTime <= :toTime) OR system.name IN (:...maintained))',
+                `((metrics.startTime >= :fromTime AND metrics.endTime <= :toTime)${
+                    maintained.length > 0
+                        ? ' OR system.name IN (:...maintained)'
+                        : ''
+                })`,
                 {
                     fromTime: new Date(Number(fromDate)),
                     toTime: new Date(Number(toDate)),
-                    maintained: await this.maintainerService.getHandledSystems([
-                        'hp',
-                    ]),
+                    maintained,
                 }
             );
 
