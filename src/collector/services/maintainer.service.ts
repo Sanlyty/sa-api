@@ -6,7 +6,6 @@ import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { WebSocket as WSClient } from 'ws';
 
-
 import { MetricType } from '../enums/metric-type.enum';
 import { StorageEntityEntity } from '../entities/storage-entity.entity';
 import { ConfigService } from '../../config/config.service';

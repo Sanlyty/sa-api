@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import axios, { AxiosError } from 'axios';
 
 import { ConfigModule } from '../config/config.module';
 
@@ -46,6 +47,16 @@ import { PgMultiValueMetricCollectorService } from './services/collect/pg-multi-
 import { MaintainerService } from './services/maintainer.service';
 import { CompatibilityController } from './controllers/compat.controller';
 import { MaintainerCacheService } from './services/maintainer-cache.service';
+
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error instanceof AxiosError)
+            return Promise.reject(new Error(error.message));
+
+        return Promise.reject(error);
+    }
+);
 
 @Module({
     imports: [
