@@ -94,10 +94,8 @@ export class MaintainerService {
                 const wsUrl = new URL('connect', url);
                 wsUrl.protocol = wsUrl.protocol.replace('http', 'ws');
 
-                console.debug('connecting to', wsUrl.toString());
                 ws = new WSClient(wsUrl);
                 ws.on('message', () => {
-                    console.debug(`received update message from ${system}`);
                     this.updateMaintainerInfo(system);
                 });
                 ws.on('close', () => {
