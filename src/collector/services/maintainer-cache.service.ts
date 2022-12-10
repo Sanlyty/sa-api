@@ -327,9 +327,9 @@ export class MaintainerCacheService {
                 console.error(
                     `Failed to precache ${pre.metric} for ${system}: ${err?.message}`
                 );
+            } finally {
+                console.timeEnd(timeKey);
             }
-
-            console.timeEnd(timeKey);
         }
 
         console.timeEnd(system);
