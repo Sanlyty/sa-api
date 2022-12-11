@@ -40,11 +40,11 @@ export class DeviceMapService {
     private queue = new Set<string>();
     private queueTimeout: NodeJS.Timeout;
     private queueJob: Promise<unknown> = Promise.resolve();
-    private queueInit: number | undefined;
+    private queueInit: number | null = null;
     private queueSystemUpdate(system: string) {
         this.queue.add(system);
 
-        if (!this.queueInit) this.queueInit = performance.now();
+        if (this.queueInit == null) this.queueInit = performance.now();
         else if (performance.now() - this.queueInit > 300_000) {
             return;
         }
@@ -55,7 +55,7 @@ export class DeviceMapService {
             this.queueJob.then(() => {
                 const systems = [...this.queue];
                 this.queue.clear();
-                this.queueInit = undefined;
+                this.queueInit = null;
 
                 this.queueJob = (async () => {
                     for (const system of systems) {
