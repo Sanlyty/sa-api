@@ -1,6 +1,9 @@
 import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
+import prisma from 'src/prisma';
 
+import { ConfigService } from '../../config/config.service';
 import { LoggingInterceptor } from '../../logging.interceptor';
+import { StorageEntityType } from '../dto/owner.dto';
 import { MaintainerCacheService } from '../services/maintainer-cache.service';
 import { MaintainerService } from '../services/maintainer.service';
 
@@ -18,10 +21,66 @@ export type MaintainerDataResponse = {
 @Controller('api/v2/compat')
 @UseInterceptors(LoggingInterceptor)
 export class CompatibilityController {
+    private feMode: Promise<unknown>;
+
     constructor(
         private maintainerService: MaintainerService,
-        private maintainerCache: MaintainerCacheService
-    ) {}
+        private maintainerCache: MaintainerCacheService,
+        private config: ConfigService
+    ) {
+        this.feMode = Promise.resolve({ mode: config.getFeMode(), map: {} });
+        this.maintainerService.loaded.then(() => {
+            this.updateFeMode();
+            this.maintainerService.events.on('updated', () => {
+                this.updateFeMode();
+            });
+        });
+    }
+
+    private updateFeMode() {
+        this.feMode = (async () => {
+            const mode = this.config.getFeMode();
+            const map: Record<string, string[]> = {};
+
+            const systems = this.maintainerService.getHandledSystems([mode]);
+
+            console.log(systems);
+
+            if (mode === 'hp') {
+                for (const system of systems) {
+                    const entity = await prisma.storageEntities.findFirst({
+                        where: {
+                            name: system,
+                            id_cat_storage_entity_type:
+                                StorageEntityType.SYSTEM,
+                        },
+                        include: { storage_entities: true },
+                    });
+
+                    const dc = entity?.storage_entities?.name;
+                    if (!dc) continue;
+
+                    if (dc in map) {
+                        map[dc].push(system);
+                    } else {
+                        map[dc] = [system];
+                    }
+                }
+            } else {
+                map['EMC'] = systems;
+            }
+
+            return {
+                mode,
+                map,
+            };
+        })();
+    }
+
+    @Get('FeMode')
+    public async getFeMode() {
+        return await this.feMode;
+    }
 
     @Get(':systemName/VmwCapacity')
     public async vmwCapacity(

@@ -24,11 +24,21 @@ const ensureExists = (key: string, sev: 'error' | 'warn') => {
     }
 };
 
+const knownFeModes = ['hp', 'emc'] as const;
+
 @Injectable()
 export class ConfigService {
     constructor() {
         ensureExists('DATABASE_URL', 'error');
         ensureExists('CONF_MAINTAINER_MAP', 'warn');
+
+        if (
+            env.FE_MODE &&
+            !knownFeModes.includes(env.FE_MODE as typeof knownFeModes[number])
+        ) {
+            console.error(`Unknown FE_MODE '${env.FE_MODE}'`);
+            process.exit(1);
+        }
     }
 
     getMaintainerConfPath(): string | undefined {
@@ -103,5 +113,9 @@ export class ConfigService {
 
     getPublicUrl(): string {
         return env.PUBLIC_URL ?? 'http://localhost:4200';
+    }
+
+    getFeMode(): typeof knownFeModes[number] {
+        return (env.FE_MODE as typeof knownFeModes[number]) ?? 'hp';
     }
 }
