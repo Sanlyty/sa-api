@@ -36,7 +36,7 @@ export class NotificationService {
                 .sendMail({
                     from: this.config.getSmtpFrom(),
                     to: this.config.getSmtpMaintenanceTo(),
-                    subject: `Storage Analytics Notification`,
+                    subject: `Graphium Dashboard Notification`,
                     html: `The notification service has been started`,
                 })
                 .catch(console.error);
@@ -166,7 +166,7 @@ export class NotificationService {
             });
 
             const systems = Object.keys(systemMap);
-            const subject = `Storage Analytics Warning - ${
+            const subject = `Graphium Dashboard Warning - ${
                 systems.length === 1 ? systems[0] : 'multiple systems'
             } - Parity Group Utilization Alert`;
             let html =
