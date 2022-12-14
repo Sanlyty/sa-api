@@ -1,6 +1,6 @@
 import { Controller, Get, Param, Query, UseInterceptors } from '@nestjs/common';
-import prisma from 'src/prisma';
 
+import prisma from '../../prisma';
 import { ConfigService } from '../../config/config.service';
 import { LoggingInterceptor } from '../../logging.interceptor';
 import { StorageEntityType } from '../dto/owner.dto';
