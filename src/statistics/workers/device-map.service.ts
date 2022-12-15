@@ -160,17 +160,22 @@ export class DeviceMapService {
 
             // Create or reactivate parity groups
             for (const pg of pool.eccGroups) {
+                const systemPoolIds = (
+                    await prisma.storageEntities.findMany({
+                        where: {
+                            parentId: systemId,
+                            id_cat_storage_entity_type: StorageEntityType.POOL,
+                        },
+                        select: { id: true },
+                    })
+                ).map((pool) => pool.id);
+
                 const pgEntity = await prisma.storageEntities.findFirst({
                     where: {
                         name: pg,
                         id_cat_storage_entity_type:
                             StorageEntityType.PARITY_GROUP,
-                        storage_entities: {
-                            parentId: systemId,
-                        },
-                    },
-                    include: {
-                        storage_entities: true,
+                        parentId: { in: systemPoolIds },
                     },
                 });
 
@@ -185,7 +190,7 @@ export class DeviceMapService {
                         )
                     );
                 } else if (
-                    pgEntity.storage_entities.id !== entity.id ||
+                    pgEntity.parentId !== entity.id ||
                     pgEntity.id_cat_storage_entity_status ===
                         StorageEntityStatus.INACTIVE
                 ) {

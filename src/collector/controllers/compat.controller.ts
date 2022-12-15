@@ -54,10 +54,15 @@ export class CompatibilityController {
                             id_cat_storage_entity_type:
                                 StorageEntityType.SYSTEM,
                         },
-                        include: { storage_entities: true },
                     });
 
-                    const dc = entity?.storage_entities?.name;
+                    if (!entity) continue;
+
+                    const parent = await prisma.storageEntities.findUnique({
+                        where: { id: entity.parentId },
+                    });
+
+                    const dc = parent?.name;
                     if (!dc) continue;
 
                     if (dc in map) {
