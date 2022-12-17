@@ -44,8 +44,6 @@ export class CompatibilityController {
 
             const systems = this.maintainerService.getHandledSystems([mode]);
 
-            console.log(systems);
-
             if (mode === 'hp') {
                 for (const system of systems) {
                     const entity = await prisma.storageEntities.findFirst({

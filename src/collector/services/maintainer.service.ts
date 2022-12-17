@@ -110,10 +110,7 @@ export class MaintainerService {
                 ws,
             };
 
-            this.events.emit('updated', {
-                ...info,
-                system,
-            } satisfies UpdatedInfo);
+            this.queueSystemUpdate(system);
             return true;
         } catch (_) {
             if (system in this.maintainerInfo) {
@@ -123,12 +120,31 @@ export class MaintainerService {
                     console.error('Failed to unregister ws', err);
                 }
                 delete this.maintainerInfo[system];
+                clearTimeout(this.queue[system]);
+                // TODO: disconnect event
             }
 
             setTimeout(() => this.updateMaintainerInfo(system), 10_000);
         }
 
         return false;
+    }
+
+    private queue: Record<string, NodeJS.Timeout> = {};
+    private queueSystemUpdate(system: string) {
+        clearTimeout(this.queue[system]);
+
+        this.queue[system] = setTimeout(() => {
+            delete this.queue[system];
+
+            const info = this.maintainerInfo[system];
+            this.events.emit('updated', {
+                features: info.features,
+                type: info.type,
+                version: info.version,
+                system,
+            } satisfies UpdatedInfo);
+        }, 60_000);
     }
 
     public handlesSystem(id: string): boolean {

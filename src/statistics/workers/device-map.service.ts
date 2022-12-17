@@ -31,39 +31,10 @@ export class DeviceMapService {
             await this.updateAllSystems();
             this.maintainerService.events.on('updated', (info: UpdatedInfo) => {
                 if (info.type === 'hp') {
-                    this.queueSystemUpdate(info.system);
+                    this.updateSystem(info.system);
                 }
             });
         });
-    }
-
-    private queue = new Set<string>();
-    private queueTimeout: NodeJS.Timeout;
-    private queueJob: Promise<unknown> = Promise.resolve();
-    private queueInit: number | null = null;
-    private queueSystemUpdate(system: string) {
-        this.queue.add(system);
-
-        if (this.queueInit == null) this.queueInit = performance.now();
-        else if (performance.now() - this.queueInit > 300_000) {
-            return;
-        }
-
-        clearTimeout(this.queueTimeout);
-        this.queueTimeout = setTimeout(() => {
-            this.queueInit = 1;
-            this.queueJob.then(() => {
-                const systems = [...this.queue];
-                this.queue.clear();
-                this.queueInit = null;
-
-                this.queueJob = (async () => {
-                    for (const system of systems) {
-                        await this.updateSystem(system);
-                    }
-                })();
-            });
-        }, 30_000);
     }
 
     public updateAllSystems() {
