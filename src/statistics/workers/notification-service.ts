@@ -56,8 +56,7 @@ export class NotificationService {
 
             this.maintainerService.events.on('updated', (data: UpdatedInfo) => {
                 if (data.type === 'hp') {
-                    // FIXME: this should be targeted on the specific maintainer
-                    this.parityGroupAlert().catch(console.error);
+                    this.debouncedInvoke();
                 }
             });
         });
