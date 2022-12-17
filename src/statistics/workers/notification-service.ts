@@ -1,4 +1,4 @@
-import { readFileSync, writeFile, existsSync } from 'fs';
+import { readFileSync, writeFile, existsSync, unlink } from 'fs';
 
 import { Injectable } from '@nestjs/common';
 import { createTransport, Transporter } from 'nodemailer';
@@ -24,10 +24,19 @@ export class NotificationService {
         private entityRepo: StorageEntityRepository
     ) {
         if (existsSync('last_notify')) {
-            const loaded = JSON.parse(readFileSync('last_notify').toString());
+            try {
+                const loaded = JSON.parse(
+                    readFileSync('last_notify').toString()
+                );
 
-            if (typeof loaded === 'object') {
-                this.lastChecked = loaded;
+                if (typeof loaded === 'object') {
+                    this.lastChecked = loaded;
+                }
+            } catch (err) {
+                unlink('last_notify', () => {
+                    // nothing
+                });
+                console.error(`Failed to recover 'last_notify':`, err);
             }
         }
 
@@ -53,6 +62,14 @@ export class NotificationService {
             });
         });
     }
+
+    private debounceTimer: NodeJS.Timeout;
+    private debouncedInvoke = () => {
+        clearTimeout(this.debounceTimer);
+        this.debounceTimer = setTimeout(() => {
+            this.parityGroupAlert().catch(console.error);
+        }, 30_000);
+    };
 
     private trySetMailer = () => {
         if (this.mailer) return true;
