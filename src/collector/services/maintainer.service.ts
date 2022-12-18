@@ -266,6 +266,18 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getHostInfo(
+        systemId: string
+    ): Promise<Record<string, { wwns: string[] }>> {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        return (
+            await lastValueFrom(
+                this.httpService.post(maintainerUrl + 'features/host_info')
+            )
+        ).data;
+    }
+
     public async getHgList(systemId: string): Promise<string[]> {
         const maintainerUrl = this.maintainerMap[systemId];
 

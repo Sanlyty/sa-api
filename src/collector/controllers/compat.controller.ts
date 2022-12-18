@@ -92,6 +92,13 @@ export class CompatibilityController {
         return await this.maintainerCache.getVmws(systemName);
     }
 
+    @Get(':systemName/HostInfo')
+    public async hostInfo(
+        @Param('systemName') systemName
+    ): Promise<ReturnType<MaintainerService['getHostInfo']>> {
+        return await this.maintainerService.getHostInfo(systemName);
+    }
+
     @Get(':systemName/ChbInfo')
     public async chbInfo(
         @Param('systemName') systemName
