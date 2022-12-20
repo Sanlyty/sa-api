@@ -84,6 +84,7 @@ export class EmcController {
             const entry = {
                 name: system,
                 metrics: [],
+                children: [],
             };
 
             for (const metric of CapMetrics) {
