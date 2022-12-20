@@ -47,6 +47,7 @@ import { PgMultiValueMetricCollectorService } from './services/collect/pg-multi-
 import { MaintainerService } from './services/maintainer.service';
 import { CompatibilityController } from './controllers/compat.controller';
 import { MaintainerCacheService } from './services/maintainer-cache.service';
+import { EmcController } from './controllers/emc.controller';
 
 axios.interceptors.response.use(
     (response) => response,
@@ -114,6 +115,7 @@ axios.interceptors.response.use(
         ExternalController,
         StorageEntityController,
         CompatibilityController,
+        EmcController,
     ],
     exports: [
         StorageEntityRepository,
