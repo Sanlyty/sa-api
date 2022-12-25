@@ -3,6 +3,7 @@ import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
 import { LoggingInterceptor } from '../../logging.interceptor';
 import { PeriodType } from '../enums/period-type.enum';
 import { MaintainerService } from '../services/maintainer.service';
+import { VMwareService } from '../services/vmware.service';
 
 const PerfMetrics: string[] = [
     'WORKLOAD',
@@ -38,7 +39,10 @@ const unitMap = {
 @Controller('api/v2/emc')
 @UseInterceptors(LoggingInterceptor)
 export class EmcController {
-    constructor(private maintainers: MaintainerService) {}
+    constructor(
+        private maintainers: MaintainerService,
+        private vmware: VMwareService
+    ) {}
 
     @Get('Performance')
     public async getPerformanceMetrics(@Query('period') period: PeriodType) {
@@ -89,21 +93,24 @@ export class EmcController {
             };
 
             for (const metric of CapMetrics) {
-                const info = await this.maintainers.getDatasetInfo(
-                    system,
-                    metric
-                );
+                let { units } = {
+                    ...(await this.maintainers.getDatasetInfo(system, metric)),
+                };
                 const response = await this.maintainers.getLastMaintainerData(
                     system,
                     metric
                 );
 
+                if (!metric.startsWith('PHYSICAL_USED_') && units === 'GB') {
+                    response.cols['average'] /= 1024;
+                    units = 'TB';
+                }
+
                 entry.metrics.push({
                     type: metric,
                     date: response.date,
-                    unit: unitMap[info.units] ?? info.units,
+                    unit: unitMap[units] ?? units,
                     value: response.cols['average'] ?? 0,
-                    // peak: (response.cols['peak'] ?? 0).toFixed(1),
                 });
             }
 
@@ -111,5 +118,10 @@ export class EmcController {
         }
 
         return result;
+    }
+
+    @Get('VMware')
+    public async getVMwareMetrics() {
+        return this.vmware.getData();
     }
 }

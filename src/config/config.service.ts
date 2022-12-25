@@ -1,4 +1,5 @@
 import path from 'path';
+import { existsSync } from 'fs';
 
 import { Injectable } from '@nestjs/common';
 import * as dotenv from 'dotenv';
@@ -11,15 +12,19 @@ if (env.CONF_SA_API_PATH) {
     path.join(env.CONF_SA_API_PATH, 'application.env');
 }
 
+const crashWithError = (text: string) => {
+    console.error(text);
+    process.exit(1);
+};
+
 const ensureExists = (key: string, sev: 'error' | 'warn') => {
     if (!env[key]?.length) {
         if (sev === 'warn') {
             console.warn(`Missing env var '${key}'`);
         } else {
-            console.error(
+            crashWithError(
                 `Missing env var '${key}', this env var is mandatory.`
             );
-            process.exit(1);
         }
     }
 };
@@ -36,8 +41,13 @@ export class ConfigService {
             env.FE_MODE &&
             !knownFeModes.includes(env.FE_MODE as typeof knownFeModes[number])
         ) {
-            console.error(`Unknown FE_MODE '${env.FE_MODE}'`);
-            process.exit(1);
+            crashWithError(`Unknown FE_MODE '${env.FE_MODE}'`);
+        }
+
+        if (this.getVmwareLocation() && !existsSync(this.getVmwareLocation())) {
+            crashWithError(
+                `Unavailable WMware path '${this.getVmwareLocation()}'`
+            );
         }
     }
 
@@ -117,5 +127,9 @@ export class ConfigService {
 
     getFeMode(): typeof knownFeModes[number] {
         return (env.FE_MODE as typeof knownFeModes[number]) ?? 'hp';
+    }
+
+    getVmwareLocation(): string | undefined {
+        return env.VMWARE_PATH;
     }
 }

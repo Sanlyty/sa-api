@@ -48,6 +48,7 @@ import { MaintainerService } from './services/maintainer.service';
 import { CompatibilityController } from './controllers/compat.controller';
 import { MaintainerCacheService } from './services/maintainer-cache.service';
 import { EmcController } from './controllers/emc.controller';
+import { VMwareService } from './services/vmware.service';
 
 axios.interceptors.response.use(
     (response) => response,
@@ -98,6 +99,7 @@ axios.interceptors.response.use(
         LatencyMetricTransformer,
         DataCenterService,
         MaintainerCacheService,
+        VMwareService,
         ExternalService,
         ExternalTypeService,
         LatencyMetricService,
