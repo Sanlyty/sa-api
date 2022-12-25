@@ -9,6 +9,7 @@ const PerfMetrics: string[] = [
     'TRANSFER',
     'READ_RESPONSE',
     'WRITE_RESPONSE',
+    'CPU',
     'HDD',
     'CACHE_WP',
 ];
