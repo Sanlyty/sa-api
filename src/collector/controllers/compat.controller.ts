@@ -152,7 +152,7 @@ export class CompatibilityController {
                     {
                         warning: `<span style="color: red">Imbalance ${(
                             _rel * 100
-                        ).toFixed(1)} (${_abs.toFixed(1)} [MB/s])</span>`,
+                        ).toFixed(1)}% (${_abs.toFixed(1)} [MB/s])</span>`,
                     },
                 ];
             })
