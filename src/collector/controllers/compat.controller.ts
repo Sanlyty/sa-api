@@ -7,6 +7,11 @@ import { StorageEntityType } from '../dto/owner.dto';
 import { MaintainerCacheService } from '../services/maintainer-cache.service';
 import { MaintainerService } from '../services/maintainer.service';
 
+import {
+    EMC_HOST_THRESHOLD_ABS,
+    EMC_HOST_THRESHOLD_PERC,
+} from './emc.controller';
+
 type QueryParams = Record<'from' | 'to', number | string | Date> & {
     map?: string;
     filter?: string;
@@ -118,6 +123,40 @@ export class CompatibilityController {
         @Param('systemName') systemName
     ): Promise<ReturnType<MaintainerService['getFePorts']>> {
         return await this.maintainerService.getFePorts(systemName);
+    }
+
+    @Get(':systemName/EmcHostEvents')
+    public async getEmcHostEvents(@Param('systemName') system) {
+        const abs = await this.maintainerService.getLastMaintainerData(
+            system,
+            'IMBALANCE_ABS'
+        );
+        const rel = await this.maintainerService.getLastMaintainerData(
+            system,
+            'IMBALANCE_PERC'
+        );
+
+        return Object.fromEntries(
+            Object.entries(abs.cols).map(([k, _abs]) => {
+                const _rel = rel.cols[k];
+
+                if (
+                    !_rel ||
+                    _rel < EMC_HOST_THRESHOLD_PERC ||
+                    _abs < EMC_HOST_THRESHOLD_ABS
+                )
+                    return [k, { warning: '' }];
+
+                return [
+                    k,
+                    {
+                        warning: `<span style="color: red">Imbalance ${(
+                            _rel * 100
+                        ).toFixed(1)} (${_abs.toFixed(1)} [MB/s])</span>`,
+                    },
+                ];
+            })
+        );
     }
 
     @Get(':systemName/ranges')
