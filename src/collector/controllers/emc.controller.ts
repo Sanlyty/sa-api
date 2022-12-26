@@ -148,7 +148,7 @@ export class EmcController {
                         const _rel = rel.cols[name];
                         if (_rel === undefined) return undefined;
 
-                        if (_rel < 0.01 || _abs < 0.002) return undefined;
+                        if (_rel < 0.1 || _abs < 20) return undefined;
 
                         const date = abs.date;
                         return {
