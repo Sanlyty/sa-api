@@ -288,6 +288,53 @@ export class MaintainerService {
         ).data;
     }
 
+    public async getHostImbalance(
+        systemId: string,
+        rangeOrDuration: [Date, Date] | number
+    ): Promise<[Date, Record<string, [number, number]>]> {
+        const maintainerUrl = this.maintainerMap[systemId];
+
+        let date;
+
+        if (typeof rangeOrDuration === 'number') {
+            const response = (
+                await lastValueFrom(
+                    this.httpService.get(
+                        `${maintainerUrl}datasets/IMBALANCE_ABS`
+                    )
+                )
+            ).data as { dataranges: number[][] };
+
+            const lastStamp = response.dataranges.at(-1)?.at(1);
+
+            date = lastStamp ? fromMins(lastStamp) : new Date();
+
+            rangeOrDuration = lastStamp
+                ? [fromMins(lastStamp - rangeOrDuration), fromMins(lastStamp)]
+                : [
+                      new Date(Date.now() - rangeOrDuration * 60 * 1000),
+                      new Date(),
+                  ];
+        } else {
+            date = rangeOrDuration[1];
+        }
+
+        return [
+            date,
+            (
+                await lastValueFrom(
+                    this.httpService.post(
+                        maintainerUrl + 'features/host_imbalance',
+                        {
+                            from: toMins(rangeOrDuration[0]),
+                            to: toMins(rangeOrDuration[1]),
+                        }
+                    )
+                )
+            ).data,
+        ];
+    }
+
     public async getPoolInfo(systemId: string): Promise<{
         [poolId: string]: {
             id: number;

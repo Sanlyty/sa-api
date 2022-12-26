@@ -126,24 +126,24 @@ export class CompatibilityController {
     }
 
     @Get(':systemName/EmcHostEvents')
-    public async getEmcHostEvents(@Param('systemName') system) {
-        const abs = await this.maintainerService.getLastMaintainerData(
+    public async getEmcHostEvents(
+        @Param('systemName') system,
+        @Query('from') from: Date,
+        @Query('to') to: Date
+    ) {
+        from = new Date(Number(from));
+        to = new Date(Number(to));
+
+        const [, imbalance] = await this.maintainerService.getHostImbalance(
             system,
-            'IMBALANCE_ABS'
-        );
-        const rel = await this.maintainerService.getLastMaintainerData(
-            system,
-            'IMBALANCE_PERC'
+            [from, to]
         );
 
         return Object.fromEntries(
-            Object.entries(abs.cols).map(([k, _abs]) => {
-                const _rel = rel.cols[k];
-
+            Object.entries(imbalance).map(([k, [abs, rel]]) => {
                 if (
-                    !_rel ||
-                    _rel < EMC_HOST_THRESHOLD_PERC ||
-                    _abs < EMC_HOST_THRESHOLD_ABS
+                    rel < EMC_HOST_THRESHOLD_PERC ||
+                    abs < EMC_HOST_THRESHOLD_ABS
                 )
                     return [k, { warning: '' }];
 
@@ -151,8 +151,8 @@ export class CompatibilityController {
                     k,
                     {
                         warning: `<span style="color: red">Imbalance ${(
-                            _rel * 100
-                        ).toFixed(1)}% (${_abs.toFixed(1)} [MB/s])</span>`,
+                            rel * 100
+                        ).toFixed(1)}% (${abs.toFixed(1)} [MB/s])</span>`,
                     },
                 ];
             })

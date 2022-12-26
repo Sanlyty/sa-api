@@ -129,35 +129,28 @@ export class EmcController {
     }
 
     @Get('Imbalance')
-    public async getImbalances() {
-        //@Query('period') period: PeriodType
+    public async getImbalances(@Query('period') period: PeriodType) {
         const result = [];
 
+        const duration = period === 'MONTH' ? 28 : period === 'WEEK' ? 7 : 1;
+
         for (const system of this.maintainers.getHandledSystems(['emc'])) {
-            const abs = await this.maintainers.getLastMaintainerData(
+            const [date, imbalance] = await this.maintainers.getHostImbalance(
                 system,
-                'IMBALANCE_ABS'
-            );
-            const rel = await this.maintainers.getLastMaintainerData(
-                system,
-                'IMBALANCE_PERC'
+                duration * 24 * 60
             );
 
             const entry = {
                 name: system,
                 metrics: [],
-                children: Object.entries(abs.cols)
-                    .map(([name, _abs]) => {
-                        const _rel = rel.cols[name];
-                        if (_rel === undefined) return undefined;
-
+                children: Object.entries(imbalance)
+                    .map(([name, [_abs, _rel]]) => {
                         if (
                             _rel < EMC_HOST_THRESHOLD_PERC ||
                             _abs < EMC_HOST_THRESHOLD_ABS
                         )
                             return undefined;
 
-                        const date = abs.date;
                         return {
                             name,
                             metrics: [
@@ -181,10 +174,7 @@ export class EmcController {
                             ],
                         };
                     })
-                    .filter((a) => {
-                        console.log(a);
-                        return Boolean(a);
-                    }),
+                    .filter((a) => Boolean(a)),
             };
 
             result.push(entry);
