@@ -124,4 +124,65 @@ export class EmcController {
     public async getVMwareMetrics() {
         return this.vmware.getData();
     }
+
+    @Get('Imbalance')
+    public async getImbalances() {
+        //@Query('period') period: PeriodType
+        const result = [];
+
+        for (const system of this.maintainers.getHandledSystems(['emc'])) {
+            const abs = await this.maintainers.getLastMaintainerData(
+                system,
+                'IMBALANCE_ABS'
+            );
+            const rel = await this.maintainers.getLastMaintainerData(
+                system,
+                'IMBALANCE_PERC'
+            );
+
+            const entry = {
+                name: system,
+                metrics: [],
+                children: Object.entries(abs.cols)
+                    .map(([name, _abs]) => {
+                        const _rel = rel.cols[name];
+                        if (_rel === undefined) return undefined;
+
+                        if (_rel < 0.01 || _abs < 0.002) return undefined;
+
+                        const date = abs.date;
+                        return {
+                            name,
+                            metrics: [
+                                {
+                                    type: 'IMBALANCE_EVENTS',
+                                    date,
+                                    value: 1,
+                                },
+                                {
+                                    type: 'IMBALANCE_PERC',
+                                    date,
+                                    value: (_rel * 100).toFixed(0),
+                                    unit: '%',
+                                },
+                                {
+                                    type: 'IMBALANCE_ABSOLUT',
+                                    date,
+                                    value: _abs.toFixed(2),
+                                    unit: 'MBps',
+                                },
+                            ],
+                        };
+                    })
+                    .filter((a) => {
+                        console.log(a);
+                        return Boolean(a);
+                    }),
+            };
+
+            result.push(entry);
+        }
+
+        return result;
+    }
 }
