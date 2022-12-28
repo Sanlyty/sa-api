@@ -5,8 +5,8 @@ import { PeriodType } from '../enums/period-type.enum';
 import { MaintainerService } from '../services/maintainer.service';
 import { VMwareService } from '../services/vmware.service';
 
-export const EMC_HOST_THRESHOLD_ABS = 20;
-export const EMC_HOST_THRESHOLD_PERC = 0.1;
+export const EMC_HOST_THRESHOLD_ABS = 10;
+export const EMC_HOST_THRESHOLD_PERC = 0.05;
 
 const PerfMetrics: string[] = [
     'WORKLOAD',
