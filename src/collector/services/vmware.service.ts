@@ -13,8 +13,11 @@ const readStamp = (dir: string) =>
         Number(dir.slice(10, 12))
     );
 
+const padStr = (n: number) => n.toString().padStart(2, '0');
 const createStamp = (d: Date) =>
-    `PFM_${d.getUTCFullYear()}${d.getUTCMonth() + 1}${d.getUTCDate()}`;
+    `PFM_${d.getUTCFullYear()}${padStr(d.getUTCMonth() + 1)}${padStr(
+        d.getUTCDate()
+    )}`;
 
 @Injectable()
 export class VMwareService {
