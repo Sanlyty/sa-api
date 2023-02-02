@@ -157,6 +157,8 @@ export class NotificationService {
             events.forEach((e) => {
                 const pool = poolMap[`${system}:${e.key}`];
 
+                if (!pool) return;
+
                 reported.push({
                     system,
                     from: new Date(e.from),
@@ -165,7 +167,7 @@ export class NotificationService {
                     average: e.average,
                     peak: e.peak,
                     pg: `PG ${e.key}`,
-                    pool: pool ?? '?',
+                    pool,
                 });
             });
         }
