@@ -40,7 +40,7 @@ const knownProtos = ['http:', 'https:'];
 // TODO: move to fetch API
 @Injectable()
 export class MaintainerService {
-    private maintainerMap: Record<string, string>;
+    public maintainerMap: Record<string, string>;
     private maintainerInfo: Record<string, MaintainerInfoInternal> = {};
     public events: EventEmitter = new EventEmitter();
     public loaded: Promise<void>;

@@ -6,6 +6,7 @@ import { LoggingInterceptor } from '../../logging.interceptor';
 import { StorageEntityType } from '../dto/owner.dto';
 import { MaintainerCacheService } from '../services/maintainer-cache.service';
 import { MaintainerService } from '../services/maintainer.service';
+import { StorageEntityRepository } from '../repositories/storage-entity.repository';
 
 import {
     EMC_HOST_THRESHOLD_ABS,
@@ -29,6 +30,7 @@ export class CompatibilityController {
     private feMode: Promise<unknown>;
 
     constructor(
+        private entityRepo: StorageEntityRepository,
         private maintainerService: MaintainerService,
         private maintainerCache: MaintainerCacheService,
         private config: ConfigService
@@ -88,6 +90,209 @@ export class CompatibilityController {
     @Get('FeMode')
     public async getFeMode() {
         return await this.feMode;
+    }
+
+    @Get('Export')
+    public async export() {
+        const isActive = ({
+            idCatComponentStatus,
+        }: {
+            idCatComponentStatus: number;
+        }) => idCatComponentStatus === 1;
+
+        const datacenters = await Promise.all(
+            (
+                await this.entityRepo.findDataCenters()
+            ).map(async (dc) => {
+                return {
+                    name: dc.name,
+                    active: isActive(dc),
+                    systems: await Promise.all(
+                        dc.children.map(async (system) => {
+                            const { children } =
+                                await this.entityRepo.findDescendantsTree(
+                                    system,
+                                    { relations: ['detail'] }
+                                );
+
+                            const pools = [];
+                            const dkcs = [];
+
+                            for (const child of children) {
+                                switch (child.idType) {
+                                    case StorageEntityType.POOL:
+                                        {
+                                            const internalId = Number(
+                                                child.serialNumber
+                                            );
+
+                                            pools.push({
+                                                // ! Infere tier in the importer
+                                                name: child.name,
+                                                active: isActive(child),
+                                                internalId: Number.isNaN(
+                                                    internalId
+                                                )
+                                                    ? null
+                                                    : internalId,
+                                                parityGroups: child.children
+                                                    .filter(
+                                                        ({ idType }) =>
+                                                            idType ===
+                                                            StorageEntityType.PARITY_GROUP
+                                                    )
+                                                    .map((pg) => ({
+                                                        name: pg.name,
+                                                    })),
+                                            });
+                                        }
+                                        break;
+                                    case StorageEntityType.DKC:
+                                        {
+                                            dkcs.push({
+                                                name: child.name,
+                                                active: isActive(child),
+                                                controllers: child.children
+                                                    .filter(
+                                                        ({ idType }) =>
+                                                            idType ===
+                                                            StorageEntityType.CONTROLLER
+                                                    )
+                                                    .map((controller) => ({
+                                                        name: controller.name,
+                                                        active: isActive(
+                                                            controller
+                                                        ),
+                                                        channelBoards:
+                                                            controller.children
+                                                                .filter(
+                                                                    ({
+                                                                        idType,
+                                                                    }) =>
+                                                                        idType ===
+                                                                        StorageEntityType.CHANNEL_BOARD
+                                                                )
+                                                                .map((chb) => ({
+                                                                    name: chb.name,
+                                                                    active: isActive(
+                                                                        chb
+                                                                    ),
+                                                                    description:
+                                                                        chb
+                                                                            .detail
+                                                                            ?.note,
+                                                                    speed:
+                                                                        chb
+                                                                            .detail
+                                                                            ?.speed ??
+                                                                        8,
+
+                                                                    ports: chb.children
+                                                                        .filter(
+                                                                            ({
+                                                                                idType,
+                                                                            }) =>
+                                                                                idType ===
+                                                                                StorageEntityType.PORT
+                                                                        )
+                                                                        .map(
+                                                                            (
+                                                                                port
+                                                                            ) => ({
+                                                                                name: port.name,
+                                                                                active: isActive(
+                                                                                    port
+                                                                                ),
+                                                                                speed: port
+                                                                                    .detail
+                                                                                    ?.speed,
+                                                                                note: port
+                                                                                    .detail
+                                                                                    ?.note,
+                                                                                cables: port
+                                                                                    .detail
+                                                                                    ?.cables,
+                                                                                switch: port
+                                                                                    .detail
+                                                                                    ?.switch,
+                                                                                slot: port
+                                                                                    .detail
+                                                                                    ?.slot,
+                                                                                wwn: port
+                                                                                    .detail
+                                                                                    ?.wwn,
+                                                                                san_env:
+                                                                                    port
+                                                                                        .detail
+                                                                                        ?.san_env,
+                                                                                automation:
+                                                                                    port
+                                                                                        .detail
+                                                                                        ?.automation ??
+                                                                                    false,
+                                                                                covers: port
+                                                                                    .detail
+                                                                                    ?.covers,
+                                                                                throughput:
+                                                                                    port
+                                                                                        .detail
+                                                                                        ?.throughput,
+                                                                            })
+                                                                        ),
+                                                                })),
+                                                    })),
+                                            });
+                                        }
+                                        break;
+                                    case StorageEntityType.HOST_GROUP:
+                                    case StorageEntityType.ADAPTER_GROUP:
+                                    case StorageEntityType.PORT_GROUP:
+                                        // These should be explicitely skipped
+                                        break;
+                                    default:
+                                        // Implicit skip, notify
+                                        console.log(
+                                            `Unknown child of type ${
+                                                StorageEntityType[child.idType]
+                                            } named ${child.name}`
+                                        );
+                                        break;
+                                }
+                            }
+
+                            return {
+                                name: system.name,
+                                active: isActive(system),
+                                maintainer:
+                                    this.maintainerService.maintainerMap[
+                                        system.name
+                                    ],
+                                hpDetails: {
+                                    model: system.detail.model,
+                                    serialNumber: system.serialNumber,
+                                    serialNumberPrefix:
+                                        system.detail.prefixReferenceId,
+                                    dkc: system.detail.dkc,
+                                    managementIp: system.detail.managementIp,
+                                    rack: system.detail.rack,
+                                    room: system.detail.room,
+
+                                    dkcs,
+                                    pools,
+                                },
+                            };
+                        })
+                    ),
+                };
+            })
+        );
+
+        return {
+            datacenters,
+            timeSeries: await prisma.timeSeries.findMany({
+                select: { variant: true, x: true, y: true },
+            }),
+        };
     }
 
     @Get(':systemName/VmwCapacity')
